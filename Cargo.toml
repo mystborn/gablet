@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "gablet_cli",
+    "gablet_api"
+]
