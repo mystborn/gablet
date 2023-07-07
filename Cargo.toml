@@ -3,5 +3,8 @@ resolver = "2"
 
 members = [
     "gablet_cli",
-    "gablet_api"
+    "gablet_api",
+    "gablet_users",
+    "gablet_auth_api",
+    "gablet_auth_server"
 ]

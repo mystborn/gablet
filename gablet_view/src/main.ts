@@ -24,6 +24,7 @@ import Editor from 'primevue/editor'
 import Chips from 'primevue/chips'
 import Menubar from 'primevue/menubar';
 import Divider from 'primevue/divider';
+import Password from 'primevue/password';
 
 import Tooltip from 'primevue/tooltip'
 
@@ -41,6 +42,7 @@ app.component('Tag', Tag)
 app.component('Dialog', Dialog)
 app.component('Inplace', Inplace)
 app.component('InputText', InputText)
+app.component('Password', Password)
 app.component('Editor', Editor)
 app.component('Chips', Chips);
 app.component('Menubar', Menubar);

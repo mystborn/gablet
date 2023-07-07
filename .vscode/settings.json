@@ -1,3 +1,9 @@
 {
-    "rust-analyzer.diagnostics.disabled": ["unresolved-proc-macro"]
+    "rust-analyzer.diagnostics.disabled": [
+        "unresolved-proc-macro"
+    ],
+    "rust-analyzer.linkedProjects": [
+        "./gablet_auth_api/Cargo.toml",
+        "./gablet_auth_api/Cargo.toml"
+    ]
 }
