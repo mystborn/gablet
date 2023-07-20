@@ -1,8 +1,10 @@
 import { createApp } from 'vue';
 import PrimeVue from 'primevue/config';
 import App from './App.vue';
-import Home from './pages/home/Home.vue';
-import SignIn from './pages/sign-in/SignIn.vue';
+import i18next from 'i18next';
+import LanguageDetector from 'i18next-browser-languagedetector'
+import { createPinia } from 'pinia'
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 
 import 'primevue/resources/primevue.min.css';
 import 'primevue/resources/themes/lara-light-purple/theme.css';
@@ -18,6 +20,8 @@ import AutoComplete from 'primevue/autocomplete'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
+import DialogService from 'primevue/dialogservice';
+import DynamicDialog from 'primevue/dynamicdialog';
 import Inplace from 'primevue/inplace'
 import InputText from 'primevue/inputtext'
 import Editor from 'primevue/editor'
@@ -25,12 +29,17 @@ import Chips from 'primevue/chips'
 import Menubar from 'primevue/menubar';
 import Divider from 'primevue/divider';
 import Password from 'primevue/password';
+import Message from 'primevue/message';
+import ProgressSpinner from 'primevue/progressspinner';
 
 import Tooltip from 'primevue/tooltip'
 
 import { router } from './router';
+import useI18n from './i18n';
 
 const app = createApp(App);
+const pinia = createPinia();
+pinia.use(piniaPluginPersistedstate);
 
 app.component('Panel', Panel)
 app.component('Toolbar', Toolbar)
@@ -47,13 +56,19 @@ app.component('Editor', Editor)
 app.component('Chips', Chips);
 app.component('Menubar', Menubar);
 app.component('Divider', Divider);
+app.component('Message', Message);
+app.component('ProgressSpinner', ProgressSpinner);
 
-app.directive('tooltip', Tooltip)
+app.directive('tooltip', Tooltip);
 
+app.use(pinia);
 app.use(PrimeVue);
+app.use(DialogService);
 app.use(router);
 
-app.mount('#app')
+useI18n(app);
+
+app.mount('#app');
 
 export default {
     router

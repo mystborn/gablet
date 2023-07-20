@@ -3,32 +3,45 @@ import { ref } from 'vue';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
 import api from '@/api/api';
+import { useI18n } from 'vue-i18n/dist/vue-i18n.js';
+import { getErrorMessage } from '@/utils/errors';
+import type { LoginResponse } from '@/api/auth';
+
+const emit = defineEmits<{
+    login: [user: LoginResponse]
+}>();
+
+const { t } = useI18n();
+const apiError = ref('');
+const loggingIn = ref(false);
 
 const schema = yup.object({
-    username: yup.string().required().label("Username"),
-    email: yup.string().email().required().label("Email"),
-    password: yup.string().required().min(8).label("Password")
+    username: yup.string().required().label(t('signin.usernameOrEmail')),
+    password: yup.string().required().min(8).label("signin.password")
 });
 
 const formState = useForm({ validationSchema: schema });
 
-const { defineComponentBinds, handleSubmit, resetForm, errors, validate } = formState;
+const { defineComponentBinds, handleSubmit, errors } = formState;
 
 const username = defineComponentBinds('username');
-const email = defineComponentBinds('email');
 const password = defineComponentBinds('password');
 
 const onSubmit = handleSubmit(async (values) => {
-    console.log("submitted with", values);
+    loggingIn.value = true;
     try {
-        let result = await api.auth.register({ username: values.username, email: values.email, password: values.password });
+        let result = await api.auth.login({ username: values.username, password: values.password });
         if (result.error) {
-            console.log("Failed to register account", result.error);
-        } else {
-            console.log("Successfully registered account", values.username);
+            apiError.value = getErrorMessage(result.error, t);
+            return;
         }
+
+        emit('login', result);
     } catch(err) {
-        console.log("Failed to register account", err);
+        apiError.value = getErrorMessage(err, t);
+        return;
+    } finally {
+        loggingIn.value = false;
     }
 });
 
@@ -37,6 +50,7 @@ const onSubmit = handleSubmit(async (values) => {
 <template>
     <div class="centered card flex justify-content-center">
         <Card class="gablet-signin-container">
+            <template #title>{{ t('signin.signIn') }}</template>
             <template #content>
                 <form @submit.prevent="onSubmit">
                     <div class="gablet-signin-input">
@@ -44,27 +58,13 @@ const onSubmit = handleSubmit(async (values) => {
                             <InputText 
                                 type="text" 
                                 v-bind="username" 
-                                id="registerUsername"
+                                id="signInUsername"
                                 class="gablet-signin-input-text"
                                 :class="{ 'p-invalid': errors.username }" />
-                            <label for="registerUsername">Username</label>
+                            <label for="signInUsername">{{ t('signin.usernameOrEmail') }}</label>
                         </div>
-                        <small id="registerUsername-help" class="p-error">
+                        <small id="signInUsername-help" class="p-error">
                             {{ errors.username }}
-                        </small>
-                    </div>
-                    <div class="gablet-signin-input">
-                        <span class="p-float-label">
-                            <InputText 
-                                type="text" 
-                                v-bind="email" 
-                                id="registerEmail"
-                                class="gablet-signin-input-text"
-                                :class="{ 'p-invalid': errors.email }" />
-                            <label for="registerEmail">Email</label>
-                        </span>
-                        <small id="registerEmail-help" class="p-error">
-                            {{ errors.email }}
                         </small>
                     </div>
                     <div class="gablet-signin-input">
@@ -72,16 +72,19 @@ const onSubmit = handleSubmit(async (values) => {
                             <Password 
                                 v-bind="password" 
                                 toggleMask
-                                inputId="registerPassword"
+                                inputId="signInPassword"
                                 class="gablet-signin-input-text"
                                 :class="{ 'p-invalid': errors.password }" />
-                            <label for="registerPassword">Password</label>
+                            <label for="signInPassword">Password</label>
                         </span>
-                        <small id="registerPassword-help" class="p-error">
+                        <small id="signInPassword-help" class="p-error">
                             {{ errors.password }}
                         </small>
                     </div>
-                    <Button class="gablet-signin-button" type="submit" label="Submit" />
+                    <Button class="gablet-signin-button" type="submit" label="Submit" :disabled="loggingIn" />
+                    <small v-if="apiError" class="p-error">
+                        {{ apiError }}
+                    </small>
                 </form>
             </template>
         </Card>

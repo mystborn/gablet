@@ -26,9 +26,9 @@ impl TokenIssuer {
     pub fn validate_auth(&self, jwt: &str, username: &str, base_uri: &str) -> Result<AuthToken, JwtError> {
         let mut validation = Validation::new(Algorithm::HS256);
         validation.sub = Some(username.into());
-        validation.set_audience(base_uri.as_bytes());
+        validation.set_audience(&[base_uri]);
 
-        match decode::<AuthToken>(jwt, &self.refresh_decoding, &validation) {
+        match decode::<AuthToken>(jwt, &self.auth_decoding, &validation) {
             Ok(token_data) => Ok(token_data.claims),
             Err(err) => Err(err),
         }
@@ -42,7 +42,7 @@ impl TokenIssuer {
         let mut validation = Validation::new(Algorithm::HS256);
         validation.sub = Some(username.into());
 
-        match decode::<RefreshToken>(jwt, &self.auth_decoding, &validation) {
+        match decode::<RefreshToken>(jwt, &self.refresh_decoding, &validation) {
             Ok(token_data) => Ok(token_data.claims),
             Err(err) => Err(err),
         }

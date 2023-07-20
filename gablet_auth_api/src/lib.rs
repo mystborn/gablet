@@ -7,7 +7,7 @@ use gablet_users::TokenIssuer;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 
-use crate::{credentials::Credentials, controllers::{login::login_form, register::{register, validate_account}}, utils::mail::init_mail_server};
+use crate::{credentials::Credentials, controllers::{login::login_web, register::{register, validate_account, register_api, validate_account_api, register_web, token_test}, refresh::{self, refresh_web, refresh_api}}, utils::mail::init_mail_server};
 
 mod controllers;
 mod credentials;
@@ -46,22 +46,29 @@ lazy_static::lazy_static! {
 pub static PG_POOL: OnceLock<Pool<AsyncPgConnection>> = OnceLock::new();
 
 pub async fn start() {
+    tracing_subscriber::fmt().with_max_level(tracing::Level::DEBUG).init();
     init_mail_server().await;
 
     let pool = postgres_connection().await;
     PG_POOL.set(pool).expect("Failed to set postgres pool");
 
     let api_routes: Router<(), Body> = Router::new()
-        .route("/login", get(login_api))
-        .route("/register", get(register))
-        .route("/validate", get(validate_account));
-    let web_routes: Router<(), Body> = Router::new().route("/login", post(login_form));
+        .route("/api/login", get(login_api))
+        .route("/api/register", get(register_api))
+        .route("/api/validate", get(validate_account_api))
+        .route("/api/refresh", get(refresh_api))
+        .route("/token-test", get(token_test));
+
+    let web_routes: Router<(), Body> = Router::new()
+        .route("/web/login", get(login_web))
+        .route("/web/register", get(register_web))
+        .route("/web/refresh", get(refresh_web));
 
     let cors = CorsLayer::new().allow_origin(tower_http::cors::Any);
 
     let app = Router::new()
-        .nest("/api", api_routes)
-        .nest("/", web_routes)
+        .merge(api_routes)
+        .merge(web_routes)
         .layer(ServiceBuilder::new().layer(cors));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3030));

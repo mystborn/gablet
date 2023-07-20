@@ -1,6 +1,6 @@
-use diesel::{Queryable, Insertable};
+use diesel::{Queryable, Insertable, Selectable};
 
-#[derive(Debug, Queryable, Insertable, Clone)]
+#[derive(Debug, Queryable, Insertable, Selectable, Clone)]
 #[diesel(table_name = crate::schema::refresh_tokens)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct RefreshTokenModel {

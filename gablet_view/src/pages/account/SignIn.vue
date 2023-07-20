@@ -3,29 +3,36 @@ import { ref } from 'vue';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
 import api from '@/api/api';
+import { useRoute, useRouter } from 'vue-router';
 
 const schema = yup.object({
-    username: yup.string().required().label("Username"),
-    email: yup.string().email().required().label("Email"),
+    username: yup.string().required().label("Username or Email"),
     password: yup.string().required().min(8).label("Password")
 });
 
+const router = useRouter();
+const route = useRoute();
+
 const formState = useForm({ validationSchema: schema });
 
-const { defineComponentBinds, handleSubmit, resetForm, errors, validate } = formState;
+const { defineComponentBinds, handleSubmit, errors } = formState;
 
 const username = defineComponentBinds('username');
-const email = defineComponentBinds('email');
 const password = defineComponentBinds('password');
 
 const onSubmit = handleSubmit(async (values) => {
     console.log("submitted with", values);
     try {
-        let result = await api.auth.register({ username: values.username, email: values.email, password: values.password });
+        let result = await api.auth.login({ username: values.username, password: values.password });
         if (result.error) {
             console.log("Failed to register account", result.error);
-        } else {
-            console.log("Successfully registered account", values.username);
+            return;
+        }
+
+        const redirect = route.query.link?.toString();
+        if(redirect) {
+            window.location.href = decodeURI(redirect);
+            return;
         }
     } catch(err) {
         console.log("Failed to register account", err);

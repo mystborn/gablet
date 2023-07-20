@@ -41,7 +41,7 @@ const iconMenu: MenuItem[] = [
 ]
 
 const setHovering = (e: MouseEvent) => {
-    hovering.value = e.target.id || e.target.parentNode.id;
+    hovering.value = e.target?.id || e.target?.parentNode.id || '';
 }
 
 const resetHovering = () => {
@@ -55,7 +55,6 @@ const getSeverity = (index: number) => {
 
     return 'secondary';
 }
-
 </script>
 
 <template>
@@ -93,6 +92,7 @@ const getSeverity = (index: number) => {
     position: sticky;
     top: 0;
     z-index: 1000;
+    flex-grow: 0 !important;
 }
 
 .gablet-title {

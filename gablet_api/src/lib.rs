@@ -47,7 +47,7 @@ pub async fn start() {
         .route("/current_user", get(current_user))
         // .route_layer(RequireAuth::login())
         .route("/login", post(login))
-        .route("/register", post(register))
+        .route("/register", post(register));
 
     let app = Router::new()
         .nest("/api", api_routes)

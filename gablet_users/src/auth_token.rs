@@ -17,13 +17,13 @@ impl AuthToken {
     /// * `role` - The user_level of the user.
     /// * `base_uri` - The base URI of the service that this token will be used for.
     /// * `expires_in` - A number of seconds that this token will be eligible for.
-    pub fn new(username: String, role: String, base_uri: String, expires_in: usize) -> AuthToken {
+    pub fn new(username: &str, role: &str, base_uri: &str, expires_in: usize) -> AuthToken {
         let now = chrono::offset::Utc::now().timestamp() as usize;
         AuthToken {
-            aud: base_uri,
-            sub: username,
+            aud: base_uri.into(),
+            sub: username.into(),
             exp: now + expires_in,
-            role,
+            role: role.into(),
         }
     }
 

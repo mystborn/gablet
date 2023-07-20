@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils::errors::ErrorResult;
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct LoginResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
