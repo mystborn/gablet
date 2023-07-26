@@ -3,7 +3,7 @@ use axum_extra::extract::cookie::Cookie;
 use diesel::result::Error as DbError;
 use diesel::{delete, insert_into, prelude::*};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use gablet_users::{AuthToken, RefreshToken};
+use gablet_tokens::{AuthToken, RefreshToken, VALIDATE_TOKEN, ACCESS_TOKEN, REFRESH_TOKEN};
 use jsonwebtoken::errors::Error as JwtError;
 
 use crate::models::refresh_token_model::RefreshTokenModel;
@@ -12,10 +12,6 @@ use crate::schema::refresh_tokens::dsl::{
     username as db_username,
 };
 use crate::{models::user::UserLevel, TOKEN_ISSUER};
-
-pub const VALIDATE_ACCOUNT: &str = "validate";
-pub const ACCESS_TOKEN: &str = "access_token";
-pub const REFRESH_TOKEN: &str = "refresh_token";
 
 const ACCESS_EXPIRY: usize = 60 * 60;
 const REFRESH_EXPIRY: usize = 60 * 60 * 24 * 7;
@@ -38,13 +34,13 @@ pub fn get_validate_token(username: &str, source: &str) -> Result<String, JwtErr
     TOKEN_ISSUER.get_auth(&AuthToken::new(
         username,
         &UserLevel::User.to_string(),
-        VALIDATE_ACCOUNT,
+        VALIDATE_TOKEN,
         VALIDATE_EXPIRY,
     ))
 }
 
 pub fn check_validate_token(token: &str, username: &str) -> Result<AuthToken, JwtError> {
-    TOKEN_ISSUER.validate_auth(token, username, VALIDATE_ACCOUNT)
+    TOKEN_ISSUER.validate_auth(token, username, VALIDATE_TOKEN)
 }
 
 pub async fn confirm_refresh_token(

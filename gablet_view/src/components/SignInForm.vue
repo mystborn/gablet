@@ -2,8 +2,9 @@
 import { ref } from 'vue';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
+import useAuthStore from '@/stores/useAuthStore';
 import api from '@/api/api';
-import { useI18n } from 'vue-i18n/dist/vue-i18n.js';
+import { useTranslation } from 'i18next-vue';
 import { getErrorMessage } from '@/utils/errors';
 import type { LoginResponse } from '@/api/auth';
 
@@ -11,13 +12,15 @@ const emit = defineEmits<{
     login: [user: LoginResponse]
 }>();
 
-const { t } = useI18n();
+const { t } = useTranslation();
+const auth = useAuthStore();
+
 const apiError = ref('');
 const loggingIn = ref(false);
 
 const schema = yup.object({
     username: yup.string().required().label(t('signin.usernameOrEmail')),
-    password: yup.string().required().min(8).label("signin.password")
+    password: yup.string().required().min(8).label(t("signin.password"))
 });
 
 const formState = useForm({ validationSchema: schema });
@@ -36,6 +39,8 @@ const onSubmit = handleSubmit(async (values) => {
             return;
         }
 
+        auth.setLogin(result);
+
         emit('login', result);
     } catch(err) {
         apiError.value = getErrorMessage(err, t);
@@ -48,54 +53,44 @@ const onSubmit = handleSubmit(async (values) => {
 </script>
 
 <template>
-    <div class="centered card flex justify-content-center">
-        <Card class="gablet-signin-container">
-            <template #title>{{ t('signin.signIn') }}</template>
-            <template #content>
-                <form @submit.prevent="onSubmit">
-                    <div class="gablet-signin-input">
-                        <div class="p-float-label">
-                            <InputText 
-                                type="text" 
-                                v-bind="username" 
-                                id="signInUsername"
-                                class="gablet-signin-input-text"
-                                :class="{ 'p-invalid': errors.username }" />
-                            <label for="signInUsername">{{ t('signin.usernameOrEmail') }}</label>
-                        </div>
-                        <small id="signInUsername-help" class="p-error">
-                            {{ errors.username }}
-                        </small>
-                    </div>
-                    <div class="gablet-signin-input">
-                        <span class="p-float-label">
-                            <Password 
-                                v-bind="password" 
-                                toggleMask
-                                inputId="signInPassword"
-                                class="gablet-signin-input-text"
-                                :class="{ 'p-invalid': errors.password }" />
-                            <label for="signInPassword">Password</label>
-                        </span>
-                        <small id="signInPassword-help" class="p-error">
-                            {{ errors.password }}
-                        </small>
-                    </div>
-                    <Button class="gablet-signin-button" type="submit" label="Submit" :disabled="loggingIn" />
-                    <small v-if="apiError" class="p-error">
-                        {{ apiError }}
-                    </small>
-                </form>
-            </template>
-        </Card>
-    </div>
+    <form class="mt-4" @submit.prevent="onSubmit">
+        <div class="gablet-signin-input">
+            <div class="p-float-label">
+                <InputText 
+                    type="text" 
+                    v-bind="username" 
+                    id="signInUsername"
+                    class="gablet-signin-input-text"
+                    :class="{ 'p-invalid': errors.username }" />
+                <label for="signInUsername">{{ t('signin.usernameOrEmail') }}</label>
+            </div>
+            <small id="signInUsername-help" class="p-error">
+                {{ errors.username }}
+            </small>
+        </div>
+        <div class="gablet-signin-input">
+            <span class="p-float-label">
+                <Password 
+                    v-bind="password"
+                    :feedback="false"
+                    toggleMask
+                    inputId="signInPassword"
+                    class="gablet-signin-input-text"
+                    :class="{ 'p-invalid': errors.password }" />
+                <label for="signInPassword">Password</label>
+            </span>
+            <small id="signInPassword-help" class="p-error">
+                {{ errors.password }}
+            </small>
+        </div>
+        <Button class="gablet-signin-button" type="submit" label="Submit" :disabled="loggingIn" />
+        <small v-if="apiError" class="p-error">
+            {{ apiError }}
+        </small>
+    </form>
 </template>
 
 <style scoped>
-
-.gablet-signin-container {
-    padding: 1.5rem;
-}
 
 .gablet-signin-input {
     margin-bottom: 1.5rem;
@@ -107,13 +102,6 @@ const onSubmit = handleSubmit(async (values) => {
 
 .gablet-signin-button {
     width: 100%;
-}
-
-.centered {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 
 </style>

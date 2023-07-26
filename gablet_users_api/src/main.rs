@@ -3,7 +3,7 @@ use std::{net::SocketAddr, sync::{OnceLock}};
 use axum::{body::Body, routing::{get, post}, Router};
 use controllers::login::login_api;
 use diesel_async::{pooled_connection::{bb8::Pool, AsyncDieselConnectionManager}, AsyncPgConnection};
-use gablet_users::TokenIssuer;
+use gablet_tokens::TokenIssuer;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 
@@ -77,4 +77,9 @@ pub async fn start() {
         .serve(app.into_make_service_with_connect_info::<SocketAddr>())
         .await
         .unwrap();
+}
+
+#[tokio::main]
+async fn main() {
+    start().await;
 }

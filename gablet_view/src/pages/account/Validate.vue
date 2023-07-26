@@ -48,7 +48,6 @@ validate();
 </script>
 
 <template>
-    <Header />
     <div id="gablet-validate" class="flex flex-grow-1 justify-content-center align-items-center">
         <div>
             <Card>
@@ -68,7 +67,6 @@ validate();
             </Card>
         </div>
     </div>
-    <Footer />
 </template>
 
 <style>

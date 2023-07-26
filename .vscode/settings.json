@@ -4,6 +4,8 @@
     ],
     "rust-analyzer.linkedProjects": [
         "./gablet_auth_api/Cargo.toml",
-        "./gablet_auth_api/Cargo.toml"
+        "./gablet_auth_api/Cargo.toml",
+        "./gablet_users_api/Cargo.toml",
+        "./gablet_api/Cargo.toml"
     ]
 }

@@ -80,23 +80,15 @@ const login = async ({ username, password }: LoginRequest) : Promise<LoginRespon
     }
 }
 
-export type RefreshResponse = {
-    success: boolean,
-    error?: ErrorResult
-}
-
-const refresh = async () : Promise<RefreshResponse> => {
+const refresh = async () : Promise<LoginResponse> => {
     let response = await fetchWithTimeout(`${auth_server}/web/refresh?source=${api_source}`);
+    let body = await response.json();
 
     if (response.ok) {
-        return {
-            success: true
-        }
+        return body as LoginResponse;
     } else {
-        let body = await response.json() as ErrorResult;
         return {
-            success: false,
-            error: body
+            error: body as ErrorResult
         }
     }
 }

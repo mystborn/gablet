@@ -1,11 +1,18 @@
 <script setup lang="ts">
 
-import { router } from "@/router";
 import type { MenuItem } from "primevue/menuitem";
+import { useDialog } from 'primevue/usedialog';
 import { ref } from "vue";
+import { useRouter } from "vue-router";
+import SignInDialogue from "./SignInDialog.vue";
+import { useTranslation } from "i18next-vue";
+import ProfileIcon from "./account/ProfileIcon.vue";
 
 const hovering = ref('');
 const searchText = ref('');
+const dialog = useDialog();
+const router = useRouter();
+const { t } = useTranslation();
 
 type NavigationItem = {
     id: string,
@@ -30,9 +37,6 @@ const navigation = [
 
 const iconMenu: MenuItem[] = [
     {
-        icon: 'pi pi-search',
-    },
-    {
         icon: 'pi pi-bell',
     },
     {
@@ -54,6 +58,27 @@ const getSeverity = (index: number) => {
     }
 
     return 'secondary';
+}
+
+const onProfileClicked = () => {
+    let signedIn = false;
+    if (signedIn) {
+        router.push({ path: '/profile' });
+        return;
+    }
+
+    dialog.open(
+        SignInDialogue,
+        {
+            props: {
+                header: t('signin.signIn'),
+                modal: true
+            },
+            onClose: (options) => {
+                console.log(options);
+            }
+        }
+    );
 }
 </script>
 
@@ -81,7 +106,7 @@ const getSeverity = (index: number) => {
                 <InputText v-model="searchText" placeholder="Search..." />
             </span>
             <Button icon="pi pi-bell" class="gablet-header-icon" severity="secondary" aria-label="Notifications" text />
-            <Button icon="pi pi-user" class="gablet-header-icon" severity="secondary" aria-label="Profile" text />
+            <ProfileIcon class="gablet-header-icon" severity="secondary" />
         </template>
     </Toolbar>
 </template>

@@ -11,6 +11,12 @@ pub struct Postgres {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct AuthCredentials {
+    pub access_secret: String,
+    pub refresh_secret: String
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Mail {
     pub username: String,
     pub password: String,
@@ -21,7 +27,8 @@ pub struct Mail {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Credentials {
     pub postgres: Postgres,
-    pub mail: Mail
+    pub mail: Mail,
+    pub auth: AuthCredentials
 }
 
 const CONFIG_FILE_PATH: &str = "./config/credentials.toml";

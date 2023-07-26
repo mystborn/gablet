@@ -1,15 +1,15 @@
-use std::net::SocketAddr;
+#![feature(lazy_cell)]
 
-use axum::{response::IntoResponse, routing::{get, post}, Json, Router};
+use std::{net::SocketAddr, sync::{LazyLock, OnceLock}};
+
+use axum::{routing::{get, post}, Router};
 use credentials::Credentials;
-use diesel::{
-    r2d2::{ConnectionManager, Pool},
-    PgConnection, IntoSql,
-};
+use diesel_async::{pooled_connection::{bb8::Pool, AsyncDieselConnectionManager}, AsyncPgConnection};
+use gablet_tokens::TokenIssuer;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 
-use crate::controllers::profile::{login, register, current_user};
+use crate::controllers::profile::{current_user};
 
 pub mod controllers;
 pub mod credentials;
@@ -29,25 +29,24 @@ fn get_postgres_connection() -> String {
     )
 }
 
-fn postgres_connection() -> Pool<ConnectionManager<PgConnection>> {
-    let manager = ConnectionManager::<PgConnection>::new(get_postgres_connection());
+async fn postgres_connection() -> Pool<AsyncPgConnection> {
+    let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(get_postgres_connection());
 
-    Pool::builder().build(manager).unwrap()
+    Pool::builder().build(manager).await.unwrap()
 }
 
-lazy_static::lazy_static! {
-    pub static ref PG_POOL: Pool<ConnectionManager<PgConnection>> = postgres_connection();
-}
+pub static PG_POOL: OnceLock<Pool<AsyncPgConnection>> = OnceLock::new();
+pub static TOKEN_ISSUER: LazyLock<TokenIssuer> = LazyLock::new(|| {
+    let creds = Credentials::new().unwrap();
+    TokenIssuer::new(creds.auth.access_secret, creds.auth.refresh_secret)
+});
 
 pub async fn start() {
     // Initialize CORS layer
     let cors = CorsLayer::new().allow_origin(tower_http::cors::Any);
 
     let api_routes = Router::new()
-        .route("/current_user", get(current_user))
-        // .route_layer(RequireAuth::login())
-        .route("/login", post(login))
-        .route("/register", post(register));
+        .route("/current_user", get(current_user));
 
     let app = Router::new()
         .nest("/api", api_routes)
@@ -61,4 +60,9 @@ pub async fn start() {
         .serve(app.into_make_service_with_connect_info::<SocketAddr>())
         .await
         .unwrap();
+}
+
+#[tokio::main]
+async fn main() {
+    start().await;
 }

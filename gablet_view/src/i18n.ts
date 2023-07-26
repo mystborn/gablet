@@ -19,7 +19,8 @@ const en = {
         username: 'Username',
         email: 'Email',
         submit: 'Submit',
-        signInerror: 'Failed to sign in: {{error}}'
+        signInerror: import.meta.env.DEV ? 'Failed to sign in: {{error}}' : "Failed to sign in",
+        registerError: import.meta.env.DEV ? 'Failed to register: {{error}}' : "Failed to sign in",
     },
     error: {
         errorCode: 'Error {{code}}',

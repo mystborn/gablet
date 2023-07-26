@@ -29,42 +29,50 @@ export const getErrorMessage = (err: any, t: SimpleTFunction) : string => {
     return message;
 }
 
-const tryParseErrorObject = (err: any, t: SimpleTFunction) : string => {
-    if (typeof err.toString === 'function') {
-        return err.toString();
+export const devLog = (...data: any[]) => {
+    if (import.meta.env.DEV) {
+        console.log(...data);
     }
+}
 
+const tryParseErrorObject = (err: any, t: SimpleTFunction) : string => {
     let builder = '';
     let lastWasErrorType = false;
 
-    if (err.error_code) {
-        builder += t('error.errorCode', { code: err.error_code });
-    }
+    const props = ['error_code', 'error_message', 'error_type', 'stack_trace'];
 
-    if (err.error_message) {
-        if (builder.length != 0) {
-            builder += t('error.errorCodeSeparator');
+    if (props.some(prop => prop in err)) {
+        if (err.error_code) {
+            builder += t('error.errorCode', { code: err.error_code });
         }
 
-        builder += t('error.errorMessage', { message: err.error_message });
-    }
+        if (err.error_message) {
+            if (builder.length != 0) {
+                builder += t('error.errorCodeSeparator');
+            }
 
-    if (err.error_type) {
-        if (builder.length != 0) {
-            builder += t('error.errorMessageSeparator');
+            builder += t('error.errorMessage', { message: err.error_message });
         }
 
-        builder += t('error.errorType', { type: err.error_type });
-        lastWasErrorType = true;
-    }
+        if (err.error_type) {
+            if (builder.length != 0) {
+                builder += t('error.errorMessageSeparator');
+            }
 
-    if (err.stack_trace) {
-        if (builder.length != 0) {
-            builder += t(lastWasErrorType ? 'error.errorTypeSeparator' : 'error.errorMessageSeparator');
+            builder += t('error.errorType', { type: err.error_type });
+            lastWasErrorType = true;
         }
-        
-        builder += t('errorStackTrace', { stackTrace: err.stack_trace });
+
+        if (err.stack_trace) {
+            if (builder.length != 0) {
+                builder += t(lastWasErrorType ? 'error.errorTypeSeparator' : 'error.errorMessageSeparator');
+            }
+            
+            builder += t('errorStackTrace', { stackTrace: err.stack_trace });
+        }
+    } else if (typeof err.toString === 'function') {
+        return err.toString();
     }
 
-    return builder;
+    return `${err}`;
 }

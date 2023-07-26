@@ -11,5 +11,7 @@ const onLogin = (response: LoginResponse) => {
 </script>
 
 <template>
-    <SignInForm @login="onLogin" />
+    <div>
+        <SignInForm @login="onLogin" />
+    </div>
 </template>

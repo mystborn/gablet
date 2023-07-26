@@ -1,11 +1,11 @@
 [package]
-name = "gablet_cli"
+name = "gablet_tokens"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-gablet_api = { path = "../gablet_api" }
-rand = { version = "0.8.5", features = ["min_const_gen"] }
-tokio = "1.28.2"
+chrono = "0.4.26"
+jsonwebtoken = "8.3.0"
+serde = "1.0.164"

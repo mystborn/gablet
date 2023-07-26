@@ -3,86 +3,47 @@ import { ref } from 'vue';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
 import api from '@/api/api';
+import useAuthStore from '@/stores/useAuthStore';
+import { useTranslation } from 'i18next-vue';
+import { getErrorMessage } from '@/utils/errors';
+import { useRoute, useRouter } from 'vue-router';
+import { devLog } from '@/utils/errors';
+import RegisterForm from '@/components/RegisterForm.vue';
+import type { LoginResponse } from '@/api/auth';
 
-const schema = yup.object({
-    username: yup.string().required().label("Username"),
-    email: yup.string().email().required().label("Email"),
-    password: yup.string().required().min(8).label("Password")
-});
+const { t } = useTranslation();
+const route = useRoute();
+const router = useRouter();
 
-const formState = useForm({ validationSchema: schema });
-
-const { defineComponentBinds, handleSubmit, resetForm, errors, validate } = formState;
-
-const username = defineComponentBinds('username');
-const email = defineComponentBinds('email');
-const password = defineComponentBinds('password');
-
-const onSubmit = handleSubmit(async (values) => {
-    console.log("submitted with", values);
-    try {
-        let result = await api.auth.register({ username: values.username, email: values.email, password: values.password });
-        if (result.error) {
-            console.log("Failed to register account", result.error);
-        } else {
-            console.log("Successfully registered account", values.username);
-        }
-    } catch(err) {
-        console.log("Failed to register account", err);
+const onRegister = (response: LoginResponse) => {
+    const redirect = route.query.link?.toString();
+    if(!redirect) {
+        router.replace('/');
+        return;
     }
-});
+
+    const destination = decodeURI(redirect);
+
+    if (destination.startsWith('/')) {
+        try {
+            router.replace(destination);
+            return;
+        } catch(err) {
+            devLog(`Failed to redirect to ${destination}. Error: `, err);
+        }
+    }
+
+    window.location.href = decodeURI(redirect);
+};
 
 </script>
 
 <template>
-    <div class="centered card flex justify-content-center">
-        <Card class="gablet-signin-container">
+    <div class="flex-grow-1 flex justify-content-center align-items-center">
+        <Card class="gablet-register-container">
+            <template #title>{{ t('signin.register') }}</template>
             <template #content>
-                <form @submit.prevent="onSubmit">
-                    <div class="gablet-signin-input">
-                        <div class="p-float-label">
-                            <InputText 
-                                type="text" 
-                                v-bind="username" 
-                                id="registerUsername"
-                                class="gablet-signin-input-text"
-                                :class="{ 'p-invalid': errors.username }" />
-                            <label for="registerUsername">Username</label>
-                        </div>
-                        <small id="registerUsername-help" class="p-error">
-                            {{ errors.username }}
-                        </small>
-                    </div>
-                    <div class="gablet-signin-input">
-                        <span class="p-float-label">
-                            <InputText 
-                                type="text" 
-                                v-bind="email" 
-                                id="registerEmail"
-                                class="gablet-signin-input-text"
-                                :class="{ 'p-invalid': errors.email }" />
-                            <label for="registerEmail">Email</label>
-                        </span>
-                        <small id="registerEmail-help" class="p-error">
-                            {{ errors.email }}
-                        </small>
-                    </div>
-                    <div class="gablet-signin-input">
-                        <span class="p-float-label">
-                            <Password 
-                                v-bind="password" 
-                                toggleMask
-                                inputId="registerPassword"
-                                class="gablet-signin-input-text"
-                                :class="{ 'p-invalid': errors.password }" />
-                            <label for="registerPassword">Password</label>
-                        </span>
-                        <small id="registerPassword-help" class="p-error">
-                            {{ errors.password }}
-                        </small>
-                    </div>
-                    <Button class="gablet-signin-button" type="submit" label="Submit" />
-                </form>
+                <RegisterForm @register="onRegister" />
             </template>
         </Card>
     </div>
@@ -90,27 +51,9 @@ const onSubmit = handleSubmit(async (values) => {
 
 <style scoped>
 
-.gablet-signin-container {
+.gablet-register-container {
     padding: 1.5rem;
-}
-
-.gablet-signin-input {
-    margin-bottom: 1.5rem;
-}
-
-.gablet-signin-input-text {
-    width: 100%;
-}
-
-.gablet-signin-button {
-    width: 100%;
-}
-
-.centered {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+    height: fit-content;
 }
 
 </style>

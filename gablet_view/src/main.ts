@@ -37,9 +37,11 @@ import Tooltip from 'primevue/tooltip'
 import { router } from './router';
 import useI18n from './i18n';
 
-const app = createApp(App);
+let app = createApp(App);
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);
+
+app = useI18n(app);
 
 app.component('Panel', Panel)
 app.component('Toolbar', Toolbar)
@@ -58,6 +60,7 @@ app.component('Menubar', Menubar);
 app.component('Divider', Divider);
 app.component('Message', Message);
 app.component('ProgressSpinner', ProgressSpinner);
+app.component('DynamicDialog', DynamicDialog);
 
 app.directive('tooltip', Tooltip);
 
@@ -65,8 +68,6 @@ app.use(pinia);
 app.use(PrimeVue);
 app.use(DialogService);
 app.use(router);
-
-useI18n(app);
 
 app.mount('#app');
 

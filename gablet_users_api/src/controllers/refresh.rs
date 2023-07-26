@@ -1,5 +1,6 @@
 use axum::{extract::Query, http::StatusCode, Json};
-use axum_extra::extract::{cookie::Cookie, CookieJar};
+use axum_extra::extract::CookieJar;
+use gablet_tokens::REFRESH_TOKEN;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -8,7 +9,7 @@ use crate::{
         errors::{get_error, get_error_from_string, get_internal_error, ErrorResult},
         tokens::{
             confirm_refresh_token, get_access_token, get_refresh_token, save_refresh_token,
-            set_token_cookies, ACCESS_TOKEN, REFRESH_TOKEN,
+            set_token_cookies,
         },
         users::find_user,
     },
@@ -29,7 +30,7 @@ pub struct RefreshApiRequest {
 pub async fn refresh_web(
     Query(request): Query<RefreshWebRequest>,
     jar: CookieJar,
-) -> Result<CookieJar, (CookieJar, (StatusCode, Json<ErrorResult>))> {
+) -> Result<(CookieJar, Json<LoginResult>), (CookieJar, (StatusCode, Json<ErrorResult>))> {
     let RefreshWebRequest { source } = request;
 
     let cookie = jar.get(REFRESH_TOKEN).ok_or_else(|| {
@@ -40,7 +41,10 @@ pub async fn refresh_web(
     })?;
 
     match refresh(&source, cookie.value()).await {
-        Ok((access, refresh)) => Ok(set_token_cookies(access, refresh, jar)),
+        Ok((access, refresh)) => Ok((
+            set_token_cookies(access.clone(), refresh.clone(), jar),
+            Json(LoginResult::new(access, refresh)),
+        )),
         Err(err) => Err((jar.clone().remove(cookie.clone()), err)),
     }
 }

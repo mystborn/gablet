@@ -7,6 +7,5 @@ import Footer from '../../components/Footer.vue';
 </script>
 
 <template>
-  <Header />
-  <Footer />
+    <h1>Home</h1>
 </template>

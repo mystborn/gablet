@@ -2,6 +2,7 @@ use axum::{extract::Query, http::StatusCode, Json};
 use axum_extra::extract::CookieJar;
 use diesel::{delete, insert_into, prelude::*, update};
 use diesel_async::RunQueryDsl;
+use gablet_tokens::VALIDATE_TOKEN;
 use mail_builder::MessageBuilder;
 use serde::{Deserialize, Serialize};
 use urlencoding::{encode, encode_binary};
@@ -14,7 +15,7 @@ use crate::{
     utils::{
         errors::{get_error, get_error_from_string, get_internal_error, ErrorResult},
         mail::{get_mail_server, get_mail_server2},
-        tokens::{get_access_token, get_refresh_token, get_validate_token, VALIDATE_ACCOUNT, save_refresh_token, set_token_cookies, check_validate_token},
+        tokens::{get_access_token, get_refresh_token, get_validate_token, save_refresh_token, set_token_cookies, check_validate_token},
         users::find_user,
     },
     PG_POOL, TOKEN_ISSUER,
@@ -104,7 +105,7 @@ pub async fn register<'a>(username: &'a str, email: &'a str, password: &'a str, 
     let token =
         get_validate_token(&username, &source).map_err(|err| get_internal_error(err).to_tuple())?;
 
-    save_refresh_token(&token, &username, VALIDATE_ACCOUNT, false, connection)
+    save_refresh_token(&token, &username, VALIDATE_TOKEN, false, connection)
         .await
         .map_err(|err| get_internal_error(err).to_tuple())?;
 

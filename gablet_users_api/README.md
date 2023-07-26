@@ -1,4 +1,4 @@
-# Gablet Auth API
+# Gablet Users API
 
 This repo contains the authentication/user microservice API for Gablet. Includes CRUD operations for users and methods for logging users in/out.
 
