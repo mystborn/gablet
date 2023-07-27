@@ -36,12 +36,12 @@ export const devLog = (...data: any[]) => {
 }
 
 const tryParseErrorObject = (err: any, t: SimpleTFunction) : string => {
-    let builder = '';
-    let lastWasErrorType = false;
-
     const props = ['error_code', 'error_message', 'error_type', 'stack_trace'];
 
     if (props.some(prop => prop in err)) {
+        let builder = '';
+        let lastWasErrorType = false;
+
         if (err.error_code) {
             builder += t('error.errorCode', { code: err.error_code });
         }
@@ -67,9 +67,11 @@ const tryParseErrorObject = (err: any, t: SimpleTFunction) : string => {
             if (builder.length != 0) {
                 builder += t(lastWasErrorType ? 'error.errorTypeSeparator' : 'error.errorMessageSeparator');
             }
-            
-            builder += t('errorStackTrace', { stackTrace: err.stack_trace });
+            builder += t('error.errorStackTrace', { stackTrace: err.stack_trace });
+            console.log(builder);
         }
+
+        return builder;
     } else if (typeof err.toString === 'function') {
         return err.toString();
     }

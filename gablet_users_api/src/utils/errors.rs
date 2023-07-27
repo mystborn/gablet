@@ -27,8 +27,10 @@ impl ErrorResult {
     }
 
     pub fn to_tuple(&self) -> (StatusCode, Json<ErrorResult>) {
-        (StatusCode::from_u16(self.error_code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
-        Json(self.clone()))
+        (
+            StatusCode::from_u16(self.error_code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+            Json(self.clone()),
+        )
     }
 }
 

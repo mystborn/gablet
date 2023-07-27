@@ -8,6 +8,8 @@ const useAuthStore = defineStore(
     'auth',
     {
         state: () => ({
+            accessToken: '',
+            refreshToken: '',
             loginExpires: 0,
             refreshExpires: 0,
             username: '',
@@ -15,32 +17,33 @@ const useAuthStore = defineStore(
         }),
         getters: {
             isLoggedIn() : boolean {
-                return Date.now() < this.loginExpires;
+                return Date.now() < this.loginExpires && Date.now() < this.refreshExpires;
             },
             canRefresh(): boolean {
                 return Date.now() < this.refreshExpires;
             }
         },
         actions: {
-            setLogin(loginResponse: LoginResponse) {
-                if (loginResponse.access_token) {
-                    try {
-                        const payload = jwtDecode<JwtPayload>(loginResponse.access_token);
-                        this.loginExpires = (payload.exp ?? 0) * 1000;
-                        this.username = payload.sub ?? '';
-                    } catch(err) {
-                        devLog("Failed to decode access token. Error: ", err);
-                    }
+            setLogin(loginResponse: LoginResponse): boolean {
+                if (!loginResponse.access_token || !loginResponse.refresh_token) {
+                    devLog("Invalid login response.");
+                    return false;
                 }
 
-                if (loginResponse.refresh_token) {
-                    try {
-                        const payload = jwtDecode<JwtPayload>(loginResponse.refresh_token);
-                        this.refreshExpires = (payload.exp ?? 0) * 1000;
-                    } catch(err) {
-                        devLog("Failed to decode refresh token. Error: ", err);
-                    }
+                try {
+                    const access = jwtDecode<JwtPayload>(loginResponse.access_token);
+                    this.loginExpires = (access.exp ?? 0) * 1000;
+                    this.username = access.sub ?? '';
+                    this.accessToken = loginResponse.access_token;
+                    const refresh = jwtDecode<JwtPayload>(loginResponse.refresh_token);
+                    this.refreshExpires = (refresh.exp ?? 0) * 1000;
+                    this.refreshToken = loginResponse.refresh_token;
+                } catch(err) {
+                    devLog("Failed to decode token. Error: ", err);
+                    return false;
                 }
+
+                return true;
             }
         },
         persist: true

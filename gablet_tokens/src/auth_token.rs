@@ -7,6 +7,7 @@ pub struct AuthToken {
     sub: String,
     exp: usize,
     role: String,
+    user_id: i32
 }
 
 impl AuthToken {
@@ -17,18 +18,23 @@ impl AuthToken {
     /// * `role` - The user_level of the user.
     /// * `base_uri` - The base URI of the service that this token will be used for.
     /// * `expires_in` - A number of seconds that this token will be eligible for.
-    pub fn new(username: &str, role: &str, base_uri: &str, expires_in: usize) -> AuthToken {
+    pub fn new(username: &str, user_id: i32, role: &str, base_uri: &str, expires_in: usize) -> AuthToken {
         let now = chrono::offset::Utc::now().timestamp() as usize;
         AuthToken {
             aud: base_uri.into(),
             sub: username.into(),
             exp: now + expires_in,
             role: role.into(),
+            user_id
         }
     }
 
     pub fn username(&self) -> String {
         self.sub.clone()
+    }
+
+    pub fn user_id(&self) -> i32 {
+        self.user_id
     }
 
     pub fn role(&self) -> String {

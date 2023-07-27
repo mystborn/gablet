@@ -15,12 +15,13 @@ export const isLoggedIn = async (auth: AuthStore, t: SimpleTFunction) : Promise<
             return false;
         }
 
-        const response = await api.auth.refresh();
+        const response = await api.auth.refresh({ refresh_token: auth.refreshToken });
         if (!response.error) {
             auth.setLogin(response);
             return true;
         }
 
+        console.log(response);
         devLog("Failed to refresh login. Error: ", getErrorMessage(response.error, t));
         return false;
     } catch(err) {

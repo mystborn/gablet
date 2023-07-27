@@ -2,12 +2,14 @@
 
 use std::{net::SocketAddr, sync::{LazyLock, OnceLock}};
 
-use axum::{routing::{get, post}, Router};
+use axum::{routing::{get, post}, Router, http::{header::{AUTHORIZATION, CONTENT_TYPE}, Method}};
 use credentials::Credentials;
 use diesel_async::{pooled_connection::{bb8::Pool, AsyncDieselConnectionManager}, AsyncPgConnection};
 use gablet_tokens::TokenIssuer;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt};
 
 use crate::controllers::profile::{current_user};
 
@@ -42,17 +44,42 @@ pub static TOKEN_ISSUER: LazyLock<TokenIssuer> = LazyLock::new(|| {
 });
 
 pub async fn start() {
+    let filter = tracing_subscriber::filter::Targets::new()
+        .with_target("tower_http::trace::on_response", tracing::Level::TRACE)
+        .with_target("tower_http::trace::on_request", tracing::Level::TRACE)
+        .with_target("tower_http::trace::make_span", tracing::Level::DEBUG)
+        .with_target("gablet_api", tracing::Level::DEBUG)
+        .with_default(tracing::Level::INFO);
+
+    let layer = tracing_subscriber::fmt::layer();
+
+    tracing_subscriber::registry()
+        .with(layer)
+        .with(filter)
+        .init();
+
     // Initialize CORS layer
-    let cors = CorsLayer::new().allow_origin(tower_http::cors::Any);
+    let cors = CorsLayer::new()
+        .allow_origin(tower_http::cors::Any)
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE])
+        .allow_methods([Method::GET, Method::POST]);
+
+    let pool = postgres_connection().await;
+    PG_POOL.set(pool).expect("Failed to set postgres pool");
 
     let api_routes = Router::new()
-        .route("/current_user", get(current_user));
+        .route("/api/profile", post(current_user));
+
+    let web_routes = Router::new()
+        .route("/web/profile", post(current_user));
 
     let app = Router::new()
-        .nest("/api", api_routes)
+        .merge(api_routes)
+        .merge(web_routes)
         .layer(ServiceBuilder::new()
             .layer(cors)
-        );
+        )
+        .layer(TraceLayer::new_for_http());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     tracing::debug!("listening on {}", addr);

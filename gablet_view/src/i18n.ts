@@ -3,6 +3,8 @@ import I18NextVue from 'i18next-vue';
 import LanguageDetector from "i18next-browser-languagedetector"
 import type { App } from "vue";
 
+const DEV = import.meta.env.DEV;
+
 const en = {
     validate: {
         validateAccount: 'Validate Account',
@@ -19,8 +21,9 @@ const en = {
         username: 'Username',
         email: 'Email',
         submit: 'Submit',
-        signInerror: import.meta.env.DEV ? 'Failed to sign in: {{error}}' : "Failed to sign in",
-        registerError: import.meta.env.DEV ? 'Failed to register: {{error}}' : "Failed to sign in",
+        signInError: DEV ? 'Failed to sign in: {{error}}' : "Failed to sign in",
+        registerError: DEV ? 'Failed to register: {{error}}' : "Failed to register",
+        invalidResponse: 'Invalid server response'
     },
     error: {
         errorCode: 'Error {{code}}',
@@ -29,7 +32,7 @@ const en = {
         errorMessageSeparator: '\n',
         errorType: '{{type}}',
         errorTypeSeparator: ': ',
-        errorStackTrace: '{{stackTrace}}',
+        errorStackTrace: '{{- stackTrace}}',
         genericError: 'Encountered an error'
     }
 }

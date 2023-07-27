@@ -32,6 +32,7 @@ const password = defineComponentBinds('password');
 
 const onSubmit = handleSubmit(async (values) => {
     loggingIn.value = true;
+    apiError.value = '';
     try {
         let result = await api.auth.login({ username: values.username, password: values.password });
         if (result.error) {
@@ -39,7 +40,9 @@ const onSubmit = handleSubmit(async (values) => {
             return;
         }
 
-        auth.setLogin(result);
+        if (!auth.setLogin(result)) {
+            apiError.value = t('signin.signInError', { error: t('signin.invalidResponse') });
+        }
 
         emit('login', result);
     } catch(err) {

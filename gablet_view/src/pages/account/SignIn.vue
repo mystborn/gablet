@@ -11,6 +11,8 @@ const router = useRouter();
 const route = useRoute();
 const { t } = useTranslation();
 
+console.log("Hello");
+
 const onLogin = (response: LoginResponse) => {
     const redirect = route.query.link?.toString();
     if(!redirect) {

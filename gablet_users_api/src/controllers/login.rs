@@ -1,5 +1,4 @@
-use axum::{extract::Query, http::StatusCode, Json};
-use axum_extra::extract::CookieJar;
+use axum::{http::StatusCode, Json};
 use diesel::{delete, insert_into, prelude::*};
 use diesel_async::RunQueryDsl;
 
@@ -8,30 +7,26 @@ use crate::{
     models::{login_result::LoginResult, refresh_token_model::RefreshTokenModel},
     utils::{
         errors::{get_error_from_string, get_internal_error, ErrorResult},
-        tokens::{get_access_token, get_refresh_token, set_token_cookies},
+        tokens::{get_access_token, get_refresh_token},
         users::find_user,
     },
     PG_POOL,
 };
 
-pub async fn login_web(Query(login_query): Query<LoginForm>, jar: CookieJar) -> Result<(CookieJar, Json<LoginResult>), (StatusCode, Json<ErrorResult>)> {
-    let response = login(login_query.username, login_query.password, "webcall".into()).await?;
+#[axum::debug_handler]
+pub async fn login(
+    Json(request): Json<LoginForm>,
+) -> Result<Json<LoginResult>, (StatusCode, Json<ErrorResult>)> {
+    let LoginForm {
+        username,
+        password,
+        source,
+    } = request;
+    println!("Logging in {}, {}", username, password);
 
-    if response.access_token.is_some() && response.refresh_token.is_some() {
-        let json = response.clone();
-        Ok((set_token_cookies(response.access_token.unwrap(), response.refresh_token.unwrap(), jar), Json(json)))
-    } else {
-        Ok((jar, Json(response)))
-    }
-}
-
-pub async fn login_api(Query(login_query): Query<LoginForm>) -> Result<Json<LoginResult>, (StatusCode, Json<ErrorResult>)> {
-    Ok(Json(login(login_query.username, login_query.password, "app".into()).await?))
-}
-
-async fn login(username_or_email: String, password: String, source: String) -> Result<LoginResult, (StatusCode, Json<ErrorResult>)> {
     use crate::schema::refresh_tokens;
     use crate::schema::refresh_tokens::dsl::{source as db_source, username as db_username};
+    use crate::schema::users::dsl::last_login as db_last_login;
 
     let pool = PG_POOL.get().unwrap().clone();
 
@@ -40,29 +35,25 @@ async fn login(username_or_email: String, password: String, source: String) -> R
         .await
         .map_err(|err| get_internal_error(err).to_tuple())?;
 
-    let user_search = find_user(
-        Some(username_or_email.clone()),
-        Some(username_or_email.clone()),
-        connection,
-    )
-    .await
-    .map_err(|err| get_internal_error(err).to_tuple())?;
+    let user_search = find_user(Some(username.clone()), Some(username.clone()), connection)
+        .await
+        .map_err(|err| get_internal_error(err).to_tuple())?;
 
     if user_search.is_none() {
-        Ok(LoginResult::error(get_error_from_string(
+        Ok(Json(LoginResult::error(get_error_from_string(
             StatusCode::UNAUTHORIZED,
-            format!("No user with the username/password {}", username_or_email),
-        )))
+            format!("No user with the username/password {}", username),
+        ))))
     } else {
         let user = user_search.unwrap();
         if !user.verify_password(&password) {
-            return Ok(LoginResult::error(get_error_from_string(
+            return Ok(Json(LoginResult::error(get_error_from_string(
                 StatusCode::OK,
                 "Invalid username or password".into(),
-            )));
+            ))));
         }
 
-        let access = get_access_token(&user.username, user.level, &source)
+        let access = get_access_token(&user.username, user.id, user.level, &source)
             .map_err(|err| get_internal_error(err).to_tuple())?;
 
         let refresh =
@@ -73,6 +64,12 @@ async fn login(username_or_email: String, password: String, source: String) -> R
             username: user.username.clone(),
             source: source.clone(),
         };
+
+        diesel::update(&user)
+            .set(db_last_login.eq(chrono::Utc::now().naive_utc()))
+            .execute(connection)
+            .await
+            .map_err(|err| get_internal_error(err).to_tuple())?;
 
         delete(refresh_tokens::table)
             .filter(
@@ -90,6 +87,6 @@ async fn login(username_or_email: String, password: String, source: String) -> R
             .await
             .map_err(|err| get_internal_error(err).to_tuple())?;
 
-        Ok(LoginResult::new(access, refresh))
+        Ok(Json(LoginResult::new(access, refresh)))
     }
 }

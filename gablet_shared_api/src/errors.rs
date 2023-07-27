@@ -46,7 +46,7 @@ pub fn get_error_from_string(error_code: StatusCode, error_message: String) -> E
 }
 
 pub fn get_error_message<T: Error>(
-    err: T,
+    _err: T,
     error_code: StatusCode,
     error_message: String,
 ) -> ErrorResult {

@@ -21,15 +21,10 @@ pub async fn find_user(
         query = query.filter(db_email.eq(email.unwrap()));
     }
 
-    let found_users = query
-        .limit(1)
+    let found_user = query
         .select(User::as_select())
-        .load(connection)
+        .first(connection)
         .await?;
 
-    if found_users.len() == 0 {
-        Ok(None)
-    } else {
-        Ok(Some(found_users[0].clone()))
-    }
+    Ok(Some(found_user))
 }

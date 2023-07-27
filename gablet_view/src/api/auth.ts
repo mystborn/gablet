@@ -1,9 +1,10 @@
 import type { ErrorResult } from "./error";
 import fetchWithTimeout from "./fetchWithTimeout";
 import getApiSource from "./getApiSource";
+import requestAsJson from "./requestAsJson";
 
-const auth_server = import.meta.env.VITE_AUTH_SERVER;
-const api_source = getApiSource();
+const authServer = import.meta.env.VITE_AUTH_SERVER;
+const apiSource = getApiSource();
 
 export type RegisterRequest = {
     username: string,
@@ -17,8 +18,9 @@ export type RegisterResponse = {
     error?: ErrorResult
 }
 
-const register = async ({ username, email, password }: RegisterRequest) : Promise<RegisterResponse> => {
-    let response = await fetchWithTimeout(`${auth_server}/web/register?username=${username}&email=${email}&password=${password}&source=${api_source}`);
+const register = async (request: RegisterRequest) : Promise<RegisterResponse> => {
+    // let response = await fetchWithTimeout(`${auth_server}/web/register?username=${username}&email=${email}&password=${password}&source=${api_source}`);
+    let response = await fetchWithTimeout(`${authServer}/api/register`, false, requestAsJson(request, apiSource));
 
     let body = await response.json();
 
@@ -42,8 +44,9 @@ export type ValidateAccountResponse = {
     error?: ErrorResult
 }
 
-const validate_account = async ({ token, username }: ValidateAccountRequest) : Promise<ValidateAccountResponse> => {
-    let response = await fetchWithTimeout(`${auth_server}/api/validate?token=${token}&username=${username}`);
+const validate_account = async (request: ValidateAccountRequest) : Promise<ValidateAccountResponse> => {
+    // let response = await fetchWithTimeout(`${auth_server}/api/validate?token=${token}&username=${username}`);
+    let response = await fetchWithTimeout(`${authServer}/api/validate`, false, requestAsJson(request, apiSource));
     let body = await response.json();
 
     if (response.ok) {
@@ -67,8 +70,8 @@ export type LoginResponse = {
     error?: ErrorResult
 }
 
-const login = async ({ username, password }: LoginRequest) : Promise<LoginResponse> => {
-    let response = await fetchWithTimeout(`${auth_server}/web/login?username=${username}&password=${password}`);
+const login = async (request: LoginRequest) : Promise<LoginResponse> => {
+    let response = await fetchWithTimeout(`${authServer}/api/login`, false, requestAsJson(request, apiSource));
     let body = await response.json();
 
     if (response.ok) {
@@ -80,8 +83,12 @@ const login = async ({ username, password }: LoginRequest) : Promise<LoginRespon
     }
 }
 
-const refresh = async () : Promise<LoginResponse> => {
-    let response = await fetchWithTimeout(`${auth_server}/web/refresh?source=${api_source}`);
+export type RefreshRequest = {
+    refresh_token: string
+}
+
+const refresh = async (request: RefreshRequest) : Promise<LoginResponse> => {
+    let response = await fetchWithTimeout(`${authServer}/api/refresh`, false, requestAsJson(request, apiSource));
     let body = await response.json();
 
     if (response.ok) {

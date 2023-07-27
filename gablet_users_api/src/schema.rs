@@ -18,24 +18,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    user_profiles (id) {
-        id -> Int4,
-        user_id -> Int4,
-        about -> Nullable<Text>,
-        #[max_length = 255]
-        avatar -> Nullable<Varchar>,
-        #[max_length = 255]
-        banner -> Nullable<Varchar>,
-        #[max_length = 30]
-        gender -> Nullable<Varchar>,
-        #[max_length = 50]
-        country -> Nullable<Varchar>,
-        #[max_length = 10]
-        lang -> Nullable<Varchar>,
-    }
-}
-
-diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::UserLevel;
 
@@ -51,13 +33,13 @@ diesel::table! {
         name -> Varchar,
         verified -> Bool,
         level -> UserLevel,
+        enabled -> Bool,
+        created -> Timestamp,
+        last_login -> Timestamp,
     }
 }
 
-diesel::joinable!(user_profiles -> users (user_id));
-
 diesel::allow_tables_to_appear_in_same_query!(
     refresh_tokens,
-    user_profiles,
     users,
 );

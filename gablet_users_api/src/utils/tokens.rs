@@ -17,9 +17,10 @@ const ACCESS_EXPIRY: usize = 60 * 60;
 const REFRESH_EXPIRY: usize = 60 * 60 * 24 * 7;
 const VALIDATE_EXPIRY: usize = 60 * 60 * 24 * 10;
 
-pub fn get_access_token(username: &str, role: UserLevel, source: &str) -> Result<String, JwtError> {
+pub fn get_access_token(username: &str, user_id: i32, role: UserLevel, source: &str) -> Result<String, JwtError> {
     TOKEN_ISSUER.get_auth(&AuthToken::new(
         username,
+        user_id,
         &role.to_string(),
         source,
         ACCESS_EXPIRY,
@@ -30,9 +31,10 @@ pub fn get_refresh_token(username: &str) -> Result<String, JwtError> {
     TOKEN_ISSUER.get_refresh(&RefreshToken::new(username.into(), REFRESH_EXPIRY))
 }
 
-pub fn get_validate_token(username: &str, source: &str) -> Result<String, JwtError> {
+pub fn get_validate_token(username: &str) -> Result<String, JwtError> {
     TOKEN_ISSUER.get_auth(&AuthToken::new(
         username,
+        0,
         &UserLevel::User.to_string(),
         VALIDATE_TOKEN,
         VALIDATE_EXPIRY,
@@ -92,16 +94,4 @@ pub async fn save_refresh_token(
         .await?;
 
     Ok(())
-}
-
-pub fn set_token_cookies(access: String, refresh: String, jar: CookieJar) -> CookieJar {
-    let access_cookie = Cookie::build(ACCESS_TOKEN.to_string(), access)
-        .http_only(true)
-        .finish();
-
-    let refresh_cookie = Cookie::build(REFRESH_TOKEN.to_string(), refresh)
-        .http_only(true)
-        .finish();
-
-    jar.add(access_cookie).add(refresh_cookie)
 }

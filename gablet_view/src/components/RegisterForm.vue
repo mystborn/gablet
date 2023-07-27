@@ -45,7 +45,9 @@ const onSubmit = handleSubmit(async (values) => {
             return;
         }
 
-        authStore.setLogin(result);
+        if (!authStore.setLogin(result)) {
+            apiError.value = t('signin.registerError', { error: t('signin.invalidResponse') });
+        }
 
         emit('register', result);
     } catch(err) {

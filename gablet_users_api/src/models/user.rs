@@ -1,20 +1,30 @@
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use strum::EnumString;
 
 use crate::utils::password::{generate_password_hash, verify_password};
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, EnumString, strum::Display, diesel_derive_enum::DbEnum)]
+#[derive(
+    Debug,
+    PartialEq,
+    PartialOrd,
+    Clone,
+    Copy,
+    EnumString,
+    strum::Display,
+    diesel_derive_enum::DbEnum,
+)]
 #[ExistingTypePath = "crate::schema::sql_types::UserLevel"]
 pub enum UserLevel {
     #[strum(serialize = "user")]
     User,
-    
+
     #[strum(serialize = "superuser")]
     Superuser,
-    
+
     #[strum(serialize = "mod")]
     Mod,
-    
+
     #[strum(serialize = "admin")]
     Admin,
 }
@@ -29,7 +39,10 @@ pub struct User {
     pub email: String,
     pub name: String,
     pub verified: bool,
-    pub level: UserLevel
+    pub level: UserLevel,
+    pub enabled: bool,
+    pub created: NaiveDateTime,
+    pub last_login: NaiveDateTime,
 }
 
 impl User {
@@ -47,7 +60,7 @@ pub struct NewUser {
     pub email: String,
     pub name: String,
     pub verified: bool,
-    pub level: UserLevel
+    pub level: UserLevel,
 }
 
 impl NewUser {
@@ -58,7 +71,7 @@ impl NewUser {
             email: email.to_owned(),
             name: "".to_owned(),
             verified: false,
-            level: UserLevel::User
+            level: UserLevel::User,
         };
 
         user.set_password(password);
