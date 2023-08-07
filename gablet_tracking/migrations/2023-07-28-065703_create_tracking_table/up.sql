@@ -1,0 +1,55 @@
+-- Your SQL goes here
+CREATE TABLE web_views(
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL DEFAULT -1,
+    browser VARCHAR(50) NOT NULL,
+    os VARCHAR(50) NOT NULL,
+    device VARCHAR(50) NOT NULL,
+    ip INET NOT NULL,
+    href TEXT NOT NULL,
+    domain VARCHAR(100) NOT NULL,
+    dt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE book_views(
+    id SERIAL PRIMARY KEY,
+    book_id INT NOT NULL,
+    chapter_id INT NOT NULL DEFAULT -1,
+    user_id INT NOT NULL DEFAULT -1,
+    os VARCHAR(50) NOT NULL,
+    device VARCHAR(50) NOT NULL,
+    ip INET NOT NULL,
+    dt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE user_views(
+    id SERIAL PRIMARY KEY,
+    viewer_id INT NOT NULL DEFAULT -1,
+    user_id INT NOT NULL,
+    os VARCHAR(50) NOT NULL,
+    device VARCHAR(50) NOT NULL,
+    ip INET NOT NULL,
+    dt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE daily_web_views(
+    id SERIAL PRIMARY KEY,
+    count INT NOT NULL,
+    href TEXT NOT NULL,
+    date DATE NOT NULL DEFAULT CURRENT_DATE
+);
+
+CREATE TABLE daily_book_views(
+    id SERIAL PRIMARY KEY,
+    count INT NOT NULL,
+    book_id INT NOT NULL,
+    chapter_id INT NOT NULL DEFAULT -1,
+    date DATE NOT NULL DEFAULT CURRENT_DATE
+);
+
+CREATE TABLE daily_user_views(
+    id SERIAL PRIMARY KEY,
+    count INT NOT NULL,
+    user_id INT NOT NULL,
+    date DATE NOT NULL DEFAULT CURRENT_DATE
+);

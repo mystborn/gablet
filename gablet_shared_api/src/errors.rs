@@ -27,8 +27,10 @@ impl ErrorResult {
     }
 
     pub fn to_tuple(&self) -> (StatusCode, Json<ErrorResult>) {
-        (StatusCode::from_u16(self.error_code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
-        Json(self.clone()))
+        (
+            StatusCode::from_u16(self.error_code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+            Json(self.clone()),
+        )
     }
 }
 
@@ -94,6 +96,19 @@ pub fn get_internal_error<T: Error>(err: T) -> ErrorResult {
         },
         error_type: if cfg!(debug_assertions) {
             Some(format!("{}", std::any::type_name::<T>()))
+        } else {
+            None
+        },
+    }
+}
+
+pub fn get_internal_dyn_error(err: Box<dyn Error>) -> ErrorResult {
+    ErrorResult {
+        error_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+        error_message: err.to_string(),
+        error_type: None,
+        stack_trace: if cfg!(debug_assertions) {
+            Some(format!("{:?}", Backtrace::capture()))
         } else {
             None
         },

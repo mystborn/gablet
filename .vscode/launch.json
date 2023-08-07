@@ -7,10 +7,56 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug",
-            "program": "${workspaceFolder}/<executable file>",
+            "name": "Debug executable 'gablet_api'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=gablet_api",
+                    "--package=gablet_api"
+                ],
+                "filter": {
+                    "name": "gablet_api",
+                    "kind": "bin"
+                }
+            },
             "args": [],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}/gablet_api"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'gablet_users_api'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=gablet_users_api",
+                    "--package=gablet_users_api"
+                ],
+                "filter": {
+                    "name": "gablet_users_api",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}/gablet_users_api"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'gablet_tracking'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=gablet_tracking",
+                    "--package=gablet_tracking"
+                ],
+                "filter": {
+                    "name": "gablet_tracking",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}/gablet_tracking"
         }
     ]
 }

@@ -2,3 +2,4 @@
 /target
 *.env
 *credentials.toml
+/docker/data/*
