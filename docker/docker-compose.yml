@@ -30,11 +30,9 @@ services:
       KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
       KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "true"
       KAFKA_LOGS_DIR: /logs
-    # entrypoint: /tmp/delay_kafka.sh
-    # volumes: 
-      # - ./data/kafka1/logs:/logs
-      # - ./data/kafka1/data:/var/lib/kafka/data
-      # - ./delay_kafka.sh:/tmp/delay_kafka.sh
+    volumes: 
+      - ./data/kafka1/logs:/logs
+      - ./data/kafka1/data:/var/lib/kafka/data
     networks:
       - kafka-network
 
@@ -52,11 +50,9 @@ services:
       KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
       KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
       KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "true"
-    # entrypoint: /tmp/delay_kafka.sh
-    # volumes: 
-      # - ./data/kafka2/logs:/logs
-      # - ./data/kafka2/data:/var/lib/kafka/data
-      # - ./delay_kafka.sh:/tmp/delay_kafka.sh
+    volumes: 
+      - ./data/kafka2/logs:/logs
+      - ./data/kafka2/data:/var/lib/kafka/data
     networks:
       - kafka-network
 
@@ -74,11 +70,9 @@ services:
       KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
       KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
       KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "true"
-    # entrypoint: /tmp/delay_kafka.sh
-    # volumes: 
-      # - ./data/kafka3/logs:/logs
-      # - ./data/kafka3/data:/var/lib/kafka/data
-      # - ./delay_kafka.sh:/tmp/delay_kafka.sh
+    volumes: 
+      - ./data/kafka3/logs:/logs
+      - ./data/kafka3/data:/var/lib/kafka/data
     networks:
       - kafka-network
 
