@@ -58,7 +58,7 @@ pub async fn track_web_view(
         let Json(user_info) = user_info.unwrap();
 
         let validate_auth =
-            TOKEN_ISSUER.validate_auth(bearer.token(), &user_info.username, &user_info.source);
+            TOKEN_ISSUER.validate_auth(bearer.token(), &user_info.username);
 
         if let Ok(auth) = validate_auth {
             user_id = Some(auth.user_id());

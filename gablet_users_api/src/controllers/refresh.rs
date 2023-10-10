@@ -13,14 +13,13 @@ use crate::{
 
 #[derive(Serialize, Deserialize)]
 pub struct RefreshRequest {
-    pub source: String,
     pub refresh: String,
 }
 
 pub async fn refresh(
     Json(request): Json<RefreshRequest>,
 ) -> Result<Json<LoginResult>, (StatusCode, Json<ErrorResult>)> {
-    let RefreshRequest { source, refresh } = request;
+    let RefreshRequest { refresh } = request;
     let pool = PG_POOL.get().unwrap().clone();
 
     let connection = &mut pool
@@ -28,7 +27,7 @@ pub async fn refresh(
         .await
         .map_err(|err| get_internal_error(err).to_tuple())?;
 
-    let token_model = confirm_refresh_token(&refresh, &source, connection)
+    let token_model = confirm_refresh_token(&refresh, connection)
         .await
         .map_err(|err| get_internal_error(err).to_tuple())?
         .ok_or_else(|| {
@@ -51,13 +50,13 @@ pub async fn refresh(
             .to_tuple()
         })?;
 
-    let access = get_access_token(&user.username, user.id, user.level, &source)
+    let access = get_access_token(&user.username, user.id, user.level)
         .map_err(|err| get_internal_error(err).to_tuple())?;
 
     let refresh =
         get_refresh_token(&user.username).map_err(|err| get_internal_error(err).to_tuple())?;
 
-    save_refresh_token(&refresh, &user.username, &source, true, connection)
+    save_refresh_token(&refresh, &user.username, true, connection)
         .await
         .map_err(|err| get_internal_error(err).to_tuple())?;
 

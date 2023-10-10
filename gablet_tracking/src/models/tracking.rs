@@ -3,8 +3,7 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserInfo {
-    pub username: String,
-    pub source: String
+    pub username: String
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Insertable)]

@@ -1,4 +1,4 @@
-use axum::{http::StatusCode, Json};
+use axum::{http::StatusCode, Json, response::IntoResponse};
 use diesel::{delete, insert_into, prelude::*};
 use diesel_async::RunQueryDsl;
 
@@ -14,18 +14,22 @@ use crate::{
 };
 
 #[axum::debug_handler]
+pub async fn pong() -> impl IntoResponse {
+    return "Pong".to_string()
+}
+
+#[axum::debug_handler]
 pub async fn login(
     Json(request): Json<LoginForm>,
 ) -> Result<Json<LoginResult>, (StatusCode, Json<ErrorResult>)> {
     let LoginForm {
         username,
         password,
-        source,
     } = request;
     println!("Logging in {}, {}", username, password);
 
     use crate::schema::refresh_tokens;
-    use crate::schema::refresh_tokens::dsl::{source as db_source, username as db_username};
+    use crate::schema::refresh_tokens::dsl::{username as db_username};
     use crate::schema::users::dsl::last_login as db_last_login;
 
     let pool = PG_POOL.get().unwrap().clone();
@@ -53,7 +57,7 @@ pub async fn login(
             ))));
         }
 
-        let access = get_access_token(&user.username, user.id, user.level, &source)
+        let access = get_access_token(&user.username, user.id, user.level)
             .map_err(|err| get_internal_error(err).to_tuple())?;
 
         let refresh =
@@ -61,8 +65,7 @@ pub async fn login(
 
         let db_token = RefreshTokenModel {
             refresh_token: refresh.clone(),
-            username: user.username.clone(),
-            source: source.clone(),
+            username: user.username.clone()
         };
 
         diesel::update(&user)
@@ -75,7 +78,6 @@ pub async fn login(
             .filter(
                 db_username
                     .eq(user.username.clone())
-                    .and(db_source.eq(source.clone())),
             )
             .execute(connection)
             .await

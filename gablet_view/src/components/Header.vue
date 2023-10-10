@@ -82,7 +82,7 @@ const onProfileClicked = () => {
 }
 </script>
 
-<template>
+<template>+
     <Toolbar class="gablet-toolbar flex-grow-1 gablet-content py-0">
         <template #start>
             <span class="flex">

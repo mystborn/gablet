@@ -23,10 +23,9 @@ impl TokenIssuer {
         encode(&Header::default(), auth_token, &self.auth_encoding)
     }
 
-    pub fn validate_auth(&self, jwt: &str, username: &str, base_uri: &str) -> Result<AuthToken, JwtError> {
+    pub fn validate_auth(&self, jwt: &str, username: &str) -> Result<AuthToken, JwtError> {
         let mut validation = Validation::new(Algorithm::HS256);
         validation.sub = Some(username.into());
-        validation.set_audience(&[base_uri]);
 
         match decode::<AuthToken>(jwt, &self.auth_decoding, &validation) {
             Ok(token_data) => Ok(token_data.claims),

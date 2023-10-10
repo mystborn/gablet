@@ -4,5 +4,4 @@ use serde::Deserialize;
 pub struct LoginForm {
     pub username: String,
     pub password: String,
-    pub source: String,
 }

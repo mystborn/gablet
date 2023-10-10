@@ -2,7 +2,7 @@ use std::{net::SocketAddr, sync::OnceLock};
 
 use axum::{
     body::Body,
-    routing::post,
+    routing::{post, get},
     Router, http::{header::{AUTHORIZATION, CONTENT_TYPE}, Method},
 };
 use diesel_async::{
@@ -17,7 +17,7 @@ use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, util::Subs
 use crate::{
     controllers::{
         refresh::refresh,
-        register::{register, validate_account}, login::login,
+        register::{register, validate_account}, login::{login, pong},
     },
     credentials::Credentials
 };
@@ -87,7 +87,8 @@ pub async fn start() {
         .route("/api/login", post(login))
         .route("/api/register", post(register))
         .route("/api/validate", post(validate_account))
-        .route("/api/refresh", post(refresh));
+        .route("/api/refresh", post(refresh))
+        .route("/api/ping", get(pong));
 
     let app = Router::new()
         .merge(api_routes)

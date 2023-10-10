@@ -34,7 +34,6 @@ pub struct RegisterRequest {
     username: String,
     email: String,
     password: String,
-    source: String,
 }
 
 pub async fn register(
@@ -44,7 +43,6 @@ pub async fn register(
         username,
         email,
         password,
-        source,
     } = request;
 
     // Steps:
@@ -78,7 +76,7 @@ pub async fn register(
 
     let token = get_validate_token(&username).map_err(|err| get_internal_error(err).to_tuple())?;
 
-    save_refresh_token(&token, &username, VALIDATE_TOKEN, false, connection)
+    save_refresh_token(&token, &username, false, connection)
         .await
         .map_err(|err| get_internal_error(err).to_tuple())?;
 
@@ -120,12 +118,12 @@ pub async fn register(
         .await
         .map_err(|err| get_internal_error(err).to_tuple())?;
 
-    let access = get_access_token(&username, user[0].id, UserLevel::User, &source)
+    let access = get_access_token(&username, user[0].id, UserLevel::User)
         .map_err(|err| get_internal_error(err).to_tuple())?;
 
     let refresh = get_refresh_token(&username).map_err(|err| get_internal_error(err).to_tuple())?;
 
-    save_refresh_token(&refresh, &username, &source, false, connection)
+    save_refresh_token(&refresh, &username, false, connection)
         .await
         .map_err(|err| get_internal_error(err).to_tuple())?;
 
