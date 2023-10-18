@@ -52,7 +52,7 @@ pub async fn login(
         let user = user_search.unwrap();
         if !user.verify_password(&password) {
             return Ok(Json(LoginResult::error(get_error_from_string(
-                StatusCode::OK,
+                StatusCode::UNAUTHORIZED,
                 "Invalid username or password".into(),
             ))));
         }

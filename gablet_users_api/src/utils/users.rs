@@ -24,7 +24,8 @@ pub async fn find_user(
     let found_user = query
         .select(User::as_select())
         .first(connection)
-        .await?;
+        .await
+        .optional()?;
 
-    Ok(Some(found_user))
+    Ok(found_user)
 }

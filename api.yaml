@@ -1,0 +1,165 @@
+openapi: '3.0.2'
+info:
+  title: Authentication API
+  version: '1.0'
+servers:
+  - url: localhost:3030/api
+tags:
+  - name: auth
+    description: Endpoints related to user login and authentication
+paths:
+  /auth/login:
+    post:
+      tags:
+        - auth
+      summary: Login User
+      description: Logs a user into Gablet, returning the access and refresh tokens required to authenticate subsequent requests.
+      operationId: authLogin
+      requestBody:
+        description: Login credentials of the user.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: User logged in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResult'
+        '401':
+          description: Invalid login credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+  
+  /auth/register:
+    post:
+      tags: [ auth ]
+      summary: Register New User
+      description: Registers a new user and logs them into Gablet.
+      operationId: authRegister
+      requestBody:
+        description: Credentials for the new user
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: New user created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResult'
+        '409':
+          description: Username or email already in use.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      tags:
+        - auth
+      summary: Refresh Access Token
+      description: Refreshes a users access token. This will also cause the refresh token to be updated, so make sure to get both values from the response.
+      operationId: authRefresh
+      requestBody:
+        description: Refresh token from a LoginResult
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Access token refreshed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResult'
+        '401':
+          description: Invalid refresh token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          description: The username or email of the user
+        password:
+          type: string
+          description: The password of the user
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          description: The username of the new user
+        email:
+          type: string
+          description: The email of the new user
+        password:
+          type: string
+          description: The password of the new user
+    RefreshRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+          description: JWT that is used to generate a new access token.
+    LoginResult:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: A token that can be used in further requests used to authenticate the user.
+        refresh_token:
+          type: string
+          description: A token that can be used to generate a new access token when the access token expires.
+    ErrorResult:
+      type: object
+      required:
+        - error_code
+        - error_message
+      properties:
+        error_code:
+          type: integer
+          format: int16
+          description: The HTTP status code associated with this error.
+        error_message:
+          type: string
+          description: A brief message explaining the cause of the error.
+        error_type:
+          type: string
+          description: The Rust error type that resulted in the error. Only sent in debug builds.
+          example: 'std:error:Error'
+        stack_trace:
+          type: string
+          description: The rust stack trace from the location where the error happened. Only sent in debug builds.
+  securitySchemes:
+    access_token:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    ErrorResponse:
+      description: Unexpected server error occurred.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResult'

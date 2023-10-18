@@ -38,7 +38,7 @@ pub struct RegisterRequest {
 
 pub async fn register(
     Json(request): Json<RegisterRequest>,
-) -> Result<Json<LoginResult>, (StatusCode, Json<ErrorResult>)> {
+) -> Result<(StatusCode, Json<LoginResult>), (StatusCode, Json<ErrorResult>)> {
     let RegisterRequest {
         username,
         email,
@@ -66,10 +66,9 @@ pub async fn register(
         .map_err(|err| get_internal_error(err).to_tuple())?;
 
     if found_user.is_some() {
-        return Ok(Json(LoginResult::error(get_error_from_string(
-            StatusCode::OK,
-            "Username or email already in use".into(),
-        ))));
+        return Err(get_error_from_string(
+            StatusCode::CONFLICT, 
+            "Username or email already in use".into()).to_tuple());
     }
 
     let user = NewUser::new(&username, &password, &email);
@@ -127,7 +126,7 @@ pub async fn register(
         .await
         .map_err(|err| get_internal_error(err).to_tuple())?;
 
-    Ok(Json(LoginResult::new(access, refresh)))
+    Ok((StatusCode::CREATED, Json(LoginResult::new(access, refresh))))
 }
 
 #[derive(Serialize, Deserialize)]
