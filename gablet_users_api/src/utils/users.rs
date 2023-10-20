@@ -1,9 +1,10 @@
-use diesel::{prelude::*};
+use crate::{
+    models::user::User,
+    schema::users::dsl::{email as db_email, username as db_username, users as db_users},
+};
+use diesel::prelude::*;
 use diesel::result::Error as DbError;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use crate::{schema::users::dsl::{
-    email as db_email, username as db_username, users as db_users,
-}, models::user::User};
 
 pub async fn find_user(
     username: Option<String>,

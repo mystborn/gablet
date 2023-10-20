@@ -1,4 +1,4 @@
-use std::{error::Error, net::SocketAddr};
+use std::net::SocketAddr;
 
 use axum::{
     extract::ConnectInfo,
@@ -6,13 +6,16 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json, TypedHeader,
 };
-use gablet_shared_api::{errors::{get_internal_error, ErrorResult}, kafka_events::{TRACKING_TOPIC, TRACKING_WEB_EVENT}};
+use gablet_shared_api::{
+    errors::{get_internal_error, ErrorResult},
+    kafka::kafka_events::{TRACKING_TOPIC, TRACKING_WEB_EVENT},
+};
 use ipnetwork::IpNetwork;
 use kafka::producer::Record;
 
 use crate::{
     models::tracking::{NewWebView, UserInfo},
-    PG_POOL, TOKEN_ISSUER, TRACKING_PRODUCER,
+    TOKEN_ISSUER, TRACKING_PRODUCER,
 };
 
 pub async fn metrics_test() -> String {
@@ -57,8 +60,7 @@ pub async fn track_web_view(
         let TypedHeader(Authorization(bearer)) = bearer.unwrap();
         let Json(user_info) = user_info.unwrap();
 
-        let validate_auth =
-            TOKEN_ISSUER.validate_auth(bearer.token(), &user_info.username);
+        let validate_auth = TOKEN_ISSUER.validate_auth(bearer.token());
 
         if let Ok(auth) = validate_auth {
             user_id = Some(auth.user_id());

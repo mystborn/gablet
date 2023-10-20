@@ -2,9 +2,14 @@ use std::{net::SocketAddr, sync::OnceLock};
 
 use axum::{
     body::Body,
+    http::{
+        header::{AUTHORIZATION, CONTENT_TYPE},
+        Method,
+    },
     routing::{post, get},
-    Router, http::{header::{AUTHORIZATION, CONTENT_TYPE}, Method},
+    Router,
 };
+use axum_prometheus::PrometheusMetricLayer;
 use diesel_async::{
     pooled_connection::{bb8::Pool, AsyncDieselConnectionManager},
     AsyncPgConnection,
@@ -15,16 +20,12 @@ use tower_http::cors::CorsLayer;
 use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
-    controllers::{
-        refresh::refresh,
-        register::{register, validate_account}, login::{login, pong},
-    },
-    credentials::Credentials
+    controllers::{login::login, refresh::refresh, register::register, validate::validate_account},
+    credentials::Credentials,
 };
 
 mod controllers;
 mod credentials;
-mod forms;
 mod models;
 mod schema;
 mod utils;
@@ -83,16 +84,24 @@ pub async fn start() {
     let pool = postgres_connection().await;
     PG_POOL.set(pool).expect("Failed to set postgres pool");
 
+    let (prometheus_layer, metrics_handle) = PrometheusMetricLayer::pair();
+
     let api_routes: Router<(), Body> = Router::new()
         .route("/api/login", post(login))
         .route("/api/register", post(register))
         .route("/api/validate", post(validate_account))
         .route("/api/refresh", post(refresh))
-        .route("/api/ping", get(pong));
+        .route("/api/metrics", get(|| async move { 
+            tracing::info!("Getting metrics");
+            metrics_handle.render() 
+        }));
 
     let app = Router::new()
         .merge(api_routes)
-        .layer(ServiceBuilder::new().layer(cors));
+        .layer(ServiceBuilder::new()
+            .layer(prometheus_layer)
+            .layer(cors)
+        );
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3030));
     tracing::debug!("listening on {}", addr);

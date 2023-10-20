@@ -1,4 +1,4 @@
-use std::sync::{Mutex, atomic::{AtomicBool, Ordering}, Arc};
+use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
 
 pub struct CancellationSource {
     token: Arc<AtomicBool>

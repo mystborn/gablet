@@ -1,23 +1,16 @@
-use axum::{extract::Query, http::StatusCode, Json};
-use diesel::{delete, insert_into, prelude::*, update};
+use axum::{http::StatusCode, Json};
+use diesel::{insert_into, prelude::*};
 use diesel_async::RunQueryDsl;
-use gablet_tokens::VALIDATE_TOKEN;
+use gablet_shared_api::errors::{get_error_from_string, get_internal_error, ErrorResult};
 use mail_builder::MessageBuilder;
 use serde::{Deserialize, Serialize};
 use urlencoding::{encode, encode_binary};
 
 use crate::{
-    models::{
-        login_result::LoginResult,
-        user::{NewUser, User, UserLevel},
-    },
+    models::{user::{NewUser, User, UserLevel}, responses::LoginResponse, requests::RegisterRequest},
     utils::{
-        errors::{get_error, get_error_from_string, get_internal_error, ErrorResult},
         mail::get_mail_server2,
-        tokens::{
-            check_validate_token, get_access_token, get_refresh_token, get_validate_token,
-            save_refresh_token,
-        },
+        tokens::{get_access_token, get_refresh_token, get_validate_token, save_refresh_token},
         users::find_user,
     },
     PG_POOL,
@@ -25,20 +18,9 @@ use crate::{
 
 use crate::schema::users::dsl::users as db_users;
 
-use crate::schema::refresh_tokens::dsl::{
-    refresh_token as db_refresh_token, refresh_tokens as db_refresh_tokens,
-};
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct RegisterRequest {
-    username: String,
-    email: String,
-    password: String,
-}
-
 pub async fn register(
     Json(request): Json<RegisterRequest>,
-) -> Result<(StatusCode, Json<LoginResult>), (StatusCode, Json<ErrorResult>)> {
+) -> Result<(StatusCode, Json<LoginResponse>), (StatusCode, Json<ErrorResult>)> {
     let RegisterRequest {
         username,
         email,
@@ -67,8 +49,10 @@ pub async fn register(
 
     if found_user.is_some() {
         return Err(get_error_from_string(
-            StatusCode::CONFLICT, 
-            "Username or email already in use".into()).to_tuple());
+            StatusCode::CONFLICT,
+            "Username or email already in use".into(),
+        )
+        .to_tuple());
     }
 
     let user = NewUser::new(&username, &password, &email);
@@ -126,129 +110,5 @@ pub async fn register(
         .await
         .map_err(|err| get_internal_error(err).to_tuple())?;
 
-    Ok((StatusCode::CREATED, Json(LoginResult::new(access, refresh))))
+    Ok((StatusCode::CREATED, Json(LoginResponse::new(access, refresh))))
 }
-
-#[derive(Serialize, Deserialize)]
-pub struct ValidateRequest {
-    token: String,
-    username: String,
-}
-
-#[derive(Serialize, Deserialize, Default)]
-pub struct ValidateResponse {
-    pub success: bool,
-
-    #[serde(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<String>,
-
-    #[serde(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<ErrorResult>,
-}
-
-pub async fn validate_account(
-    Json(request): Json<ValidateRequest>,
-) -> Result<Json<ValidateResponse>, (StatusCode, Json<ErrorResult>)> {
-    let ValidateRequest { token, username } = request;
-    let auth = check_validate_token(&token, &username);
-    if auth.is_err() {
-        return Ok(Json(ValidateResponse {
-            success: false,
-            message: Some("Invalid validation token".into()),
-            error: Some(get_error(auth.unwrap_err(), StatusCode::UNAUTHORIZED)),
-        }));
-    }
-
-    let pool = PG_POOL.get().unwrap().clone();
-
-    let connection = &mut pool
-        .get()
-        .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
-
-    let user_search = find_user(Some(username.clone()), None, connection)
-        .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
-
-    if user_search.is_none() {
-        return Ok(Json(ValidateResponse {
-            success: false,
-            message: Some(format!("No user {} exists", &username)),
-            error: Some(get_error(auth.unwrap_err(), StatusCode::UNAUTHORIZED)),
-        }));
-    }
-
-    let mut user = user_search.unwrap();
-    if user.verified {
-        return Ok(Json(ValidateResponse {
-            success: false,
-            message: Some("User already verified".into()),
-            error: Some(get_error(auth.unwrap_err(), StatusCode::UNAUTHORIZED)),
-        }));
-    }
-
-    user.verified = true;
-
-    update(db_users)
-        .set(user)
-        .execute(connection)
-        .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
-
-    delete(db_refresh_tokens)
-        .filter(db_refresh_token.eq(token))
-        .execute(connection)
-        .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
-
-    Ok(Json(ValidateResponse {
-        success: true,
-        message: Some(format!("Successfully registered {username}")),
-        error: None,
-    }))
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct TokenTestResponse {
-    pub success: bool,
-    pub message: String,
-}
-
-// pub async fn token_test(
-//     Query(query): Query<RegisterRequest>,
-// ) -> Result<Json<TokenTestResponse>, (StatusCode, Json<ErrorResult>)> {
-//     let RegisterRequest {
-//         username, source, ..
-//     } = query;
-
-//     let pool = PG_POOL.get().unwrap().clone();
-
-//     let connection = &mut pool
-//         .get()
-//         .await
-//         .map_err(|err| get_internal_error(err).to_tuple())?;
-
-//     let token = get_validate_token(&username).map_err(|err| get_internal_error(err).to_tuple())?;
-
-//     // save_refresh_token(&token, &username, VALIDATE_ACCOUNT, false, connection)
-//     //     .await
-//     //     .map_err(|err| get_internal_error(err).to_tuple())?;
-
-//     let auth = check_validate_token(&token, &username);
-//     if auth.is_err() {
-//         return Ok(Json(TokenTestResponse {
-//             success: false,
-//             message: format!(
-//                 "Failed to validate token: {}",
-//                 auth.unwrap_err().to_string()
-//             ),
-//         }));
-//     }
-
-//     Ok(Json(TokenTestResponse {
-//         success: true,
-//         message: "Successfully validated the token".into(),
-//     }))
-// }

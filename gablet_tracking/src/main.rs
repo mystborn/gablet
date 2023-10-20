@@ -1,37 +1,53 @@
 #![feature(lazy_cell)]
 
-use std::{sync::{OnceLock, LazyLock, Mutex}, net::SocketAddr, time::Duration};
+use std::{
+    net::SocketAddr,
+    sync::{LazyLock, Mutex, OnceLock},
+    time::Duration,
+};
 
-use axum::{http::{Method, header::{AUTHORIZATION, CONTENT_TYPE}}, Router, routing::get};
-use diesel_async::{pooled_connection::{bb8::Pool, AsyncDieselConnectionManager}, AsyncPgConnection};
-use gablet_shared_api::{credentials::Credentials, kafka_thread::kafka_thread, cancellation_token::CancellationSource};
+use axum::{
+    http::{
+        header::{AUTHORIZATION, CONTENT_TYPE},
+        Method,
+    },
+    routing::get,
+    Router,
+};
+use diesel_async::{
+    pooled_connection::{bb8::Pool, AsyncDieselConnectionManager},
+    AsyncPgConnection,
+};
+use gablet_shared_api::{
+    cancellation_token::CancellationSource, credentials::Credentials,
+    kafka::kafka_thread::kafka_thread,
+};
 use gablet_tokens::TokenIssuer;
 use kafka::producer::Producer;
 use tower::ServiceBuilder;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt};
 
-use crate::{controllers::metrics::{metrics_test, track_web_view}, gablet_kafka::kafka_thread::dispatch_kafka_event};
+use crate::{
+    controllers::metrics::{metrics_test, track_web_view},
+    gablet_kafka::kafka_thread::dispatch_kafka_event,
+};
 
-mod schema;
-mod models;
 mod controllers;
-mod gablet_kafka;
 mod events;
+mod gablet_kafka;
+mod models;
+mod schema;
 
 fn get_postgres_connection() -> String {
     let creds = Credentials::new("./config/credentials.toml")
         .unwrap()
         .postgres
         .expect("Missing postgres credentials");
-    
+
     format!(
         "postgres://{}:{}@{}:{}/{}",
-        creds.username,
-        creds.password,
-        creds.host,
-        creds.port,
-        creds.db
+        creds.username, creds.password, creds.host, creds.port, creds.db
     )
 }
 
@@ -43,12 +59,18 @@ async fn postgres_connection() -> Pool<AsyncPgConnection> {
 
 pub static PG_POOL: OnceLock<Pool<AsyncPgConnection>> = OnceLock::new();
 pub static TOKEN_ISSUER: LazyLock<TokenIssuer> = LazyLock::new(|| {
-    let creds = Credentials::new("./config/credentials.toml").unwrap().auth.expect("Missing auth credentials");
+    let creds = Credentials::new("./config/credentials.toml")
+        .unwrap()
+        .auth
+        .expect("Missing auth credentials");
     TokenIssuer::new(creds.access_secret, creds.refresh_secret)
 });
 
 pub static TRACKING_PRODUCER: LazyLock<Mutex<kafka::producer::Producer>> = LazyLock::new(|| {
-    let creds = Credentials::new("./config/credentials.toml").unwrap().kafka.expect("Missing kafka credentials");
+    let creds = Credentials::new("./config/credentials.toml")
+        .unwrap()
+        .kafka
+        .expect("Missing kafka credentials");
     let producer = Producer::from_hosts(creds.hosts)
         .with_ack_timeout(Duration::from_secs(2))
         .with_required_acks(kafka::producer::RequiredAcks::One)
@@ -86,11 +108,12 @@ pub async fn start() {
     let app = Router::new()
         .route("/", get(metrics_test))
         .route("/tracking", get(track_web_view))
-        .layer(ServiceBuilder::new()
-            .layer(TraceLayer::new_for_http())
-            .layer(cors)
-    );
-    
+        .layer(
+            ServiceBuilder::new()
+                .layer(TraceLayer::new_for_http())
+                .layer(cors),
+        );
+
     let mut cts = CancellationSource::new();
     let token = cts.token();
 

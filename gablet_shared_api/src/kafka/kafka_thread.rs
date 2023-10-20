@@ -90,7 +90,7 @@ where
     let mut consumer_builder = Consumer::from_hosts(creds.hosts)
         .with_group("playground".into())
         .with_fallback_offset(FetchOffset::Earliest)
-        .with_offset_storage(GroupOffsetStorage::Kafka);
+        .with_offset_storage(Some(GroupOffsetStorage::Kafka));
 
     for topic in creds.topics {
         consumer_builder = consumer_builder.with_topic(topic);

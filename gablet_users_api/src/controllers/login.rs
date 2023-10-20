@@ -1,36 +1,26 @@
-use axum::{http::StatusCode, Json, response::IntoResponse};
-use diesel::{delete, insert_into, prelude::*};
+use axum::{http::StatusCode, Json};
+use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use gablet_shared_api::errors::{get_error_from_string, get_internal_error, ErrorResult};
 
+use crate::models::requests::LoginRequest;
+use crate::models::responses::LoginResponse;
+use crate::schema::users::dsl::last_login as db_last_login;
 use crate::{
-    forms::login_form::LoginForm,
-    models::{login_result::LoginResult, refresh_token_model::RefreshTokenModel},
     utils::{
-        errors::{get_error_from_string, get_internal_error, ErrorResult},
-        tokens::{get_access_token, get_refresh_token},
+        tokens::{get_access_token, get_refresh_token, save_refresh_token},
         users::find_user,
     },
     PG_POOL,
 };
 
 #[axum::debug_handler]
-pub async fn pong() -> impl IntoResponse {
-    return "Pong".to_string()
-}
-
-#[axum::debug_handler]
 pub async fn login(
-    Json(request): Json<LoginForm>,
-) -> Result<Json<LoginResult>, (StatusCode, Json<ErrorResult>)> {
-    let LoginForm {
-        username,
-        password,
-    } = request;
-    println!("Logging in {}, {}", username, password);
+    Json(request): Json<LoginRequest>,
+) -> Result<Json<LoginResponse>, (StatusCode, Json<ErrorResult>)> {
+    let LoginRequest { username, password } = request;
 
-    use crate::schema::refresh_tokens;
-    use crate::schema::refresh_tokens::dsl::{username as db_username};
-    use crate::schema::users::dsl::last_login as db_last_login;
+    tracing::trace!("Logging in {}", username);
 
     let pool = PG_POOL.get().unwrap().clone();
 
@@ -39,56 +29,40 @@ pub async fn login(
         .await
         .map_err(|err| get_internal_error(err).to_tuple())?;
 
-    let user_search = find_user(Some(username.clone()), Some(username.clone()), connection)
+    let user = find_user(Some(username.clone()), Some(username.clone()), connection)
+        .await
+        .map_err(|err| get_internal_error(err).to_tuple())?
+        .ok_or_else(|| {
+            get_error_from_string(
+                StatusCode::UNAUTHORIZED,
+                format!("No user with the username/password {}", username),
+            )
+            .to_tuple()
+        })?;
+
+    if !user.verify_password(&password) {
+        return Err(get_error_from_string(
+            StatusCode::UNAUTHORIZED,
+            "Invalid username or password".into(),
+        )
+        .to_tuple());
+    }
+
+    let access = get_access_token(&user.username, user.id, user.level)
+        .map_err(|err| get_internal_error(err).to_tuple())?;
+
+    let refresh =
+        get_refresh_token(&user.username).map_err(|err| get_internal_error(err).to_tuple())?;
+
+    save_refresh_token(&refresh, &user.username, false, connection)
         .await
         .map_err(|err| get_internal_error(err).to_tuple())?;
 
-    if user_search.is_none() {
-        Ok(Json(LoginResult::error(get_error_from_string(
-            StatusCode::UNAUTHORIZED,
-            format!("No user with the username/password {}", username),
-        ))))
-    } else {
-        let user = user_search.unwrap();
-        if !user.verify_password(&password) {
-            return Ok(Json(LoginResult::error(get_error_from_string(
-                StatusCode::UNAUTHORIZED,
-                "Invalid username or password".into(),
-            ))));
-        }
+    diesel::update(&user)
+        .set(db_last_login.eq(chrono::Utc::now().naive_utc()))
+        .execute(connection)
+        .await
+        .map_err(|err| get_internal_error(err).to_tuple())?;
 
-        let access = get_access_token(&user.username, user.id, user.level)
-            .map_err(|err| get_internal_error(err).to_tuple())?;
-
-        let refresh =
-            get_refresh_token(&user.username).map_err(|err| get_internal_error(err).to_tuple())?;
-
-        let db_token = RefreshTokenModel {
-            refresh_token: refresh.clone(),
-            username: user.username.clone()
-        };
-
-        diesel::update(&user)
-            .set(db_last_login.eq(chrono::Utc::now().naive_utc()))
-            .execute(connection)
-            .await
-            .map_err(|err| get_internal_error(err).to_tuple())?;
-
-        delete(refresh_tokens::table)
-            .filter(
-                db_username
-                    .eq(user.username.clone())
-            )
-            .execute(connection)
-            .await
-            .map_err(|err| get_internal_error(err).to_tuple())?;
-
-        insert_into(refresh_tokens::table)
-            .values(&db_token)
-            .execute(connection)
-            .await
-            .map_err(|err| get_internal_error(err).to_tuple())?;
-
-        Ok(Json(LoginResult::new(access, refresh)))
-    }
+    Ok(Json(LoginResponse::new(access, refresh)))
 }

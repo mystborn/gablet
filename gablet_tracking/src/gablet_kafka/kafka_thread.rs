@@ -1,5 +1,5 @@
 use std::error::Error;
-use gablet_shared_api::kafka_events::TRACKING_WEB_EVENT;
+use gablet_shared_api::kafka::kafka_events::TRACKING_WEB_EVENT;
 
 use crate::{models::tracking::NewWebView, events::tracking::save_web_view};
 

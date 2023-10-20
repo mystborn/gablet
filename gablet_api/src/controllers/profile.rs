@@ -22,7 +22,7 @@ pub async fn current_user(
     Json(user): Json<UserRequest>,
 ) -> Result<Json<CurrentUserResult>, (StatusCode, Json<ErrorResult>)> {
     let result = TOKEN_ISSUER
-        .validate_auth(auth.token(), &user.username)
+        .validate_auth(auth.token())
         .map_err(|err| get_internal_error(err).to_tuple())?;
 
     Ok(Json(CurrentUserResult {
