@@ -17,7 +17,7 @@ use diesel_async::{
 use gablet_shared_api::{kafka::kafka_writer::KafkaWriter, credentials::Credentials};
 use gablet_tokens::TokenIssuer;
 use tower::ServiceBuilder;
-use tower_http::cors::CorsLayer;
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
 use crate::controllers::{login::login, refresh::refresh, register::register, validate::validate_account};
@@ -107,6 +107,7 @@ pub async fn start() {
     let app = Router::new()
         .merge(api_routes)
         .layer(ServiceBuilder::new()
+            .layer(TraceLayer::new_for_http())
             .layer(prometheus_layer)
             .layer(cors)
         );
