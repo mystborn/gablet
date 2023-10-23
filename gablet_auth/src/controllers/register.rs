@@ -3,7 +3,6 @@ use diesel::{insert_into, prelude::*};
 use diesel_async::RunQueryDsl;
 use gablet_shared_api::errors::{get_error_from_string, get_internal_error, ErrorResult};
 use mail_builder::MessageBuilder;
-use serde::{Deserialize, Serialize};
 use urlencoding::{encode, encode_binary};
 
 use crate::{

@@ -17,10 +17,10 @@ use diesel_async::{
 use gablet_shared_api::{kafka::kafka_writer::KafkaWriter, credentials::Credentials};
 use gablet_tokens::TokenIssuer;
 use tower::ServiceBuilder;
-use tower_http::cors::CorsLayer;
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
-use crate::controllers::{login::login, refresh::refresh, register::register, validate::validate_account};
+use crate::controllers::{login::login, refresh::refresh, register::register, validate::validate_account, logout::logout};
 
 mod controllers;
 mod models;
@@ -80,7 +80,7 @@ pub async fn start() {
     tracing_subscriber::registry()
         .with(console_layer)
         .with(json_layer)
-        .with(filter)
+        // .with(filter)
         .init();
 
     // Initialize CORS layer
@@ -96,6 +96,7 @@ pub async fn start() {
 
     let api_routes: Router<(), Body> = Router::new()
         .route("/api/login", post(login))
+        .route("/api/logout", post(logout))
         .route("/api/register", post(register))
         .route("/api/validate", post(validate_account))
         .route("/api/refresh", post(refresh))
@@ -107,6 +108,7 @@ pub async fn start() {
     let app = Router::new()
         .merge(api_routes)
         .layer(ServiceBuilder::new()
+            // .layer(TraceLayer::new_for_http())
             .layer(prometheus_layer)
             .layer(cors)
         );
