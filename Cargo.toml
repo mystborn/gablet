@@ -4,7 +4,7 @@ resolver = "2"
 members = [
     "gablet_api",
     "gablet_tokens",
-    "gablet_users_api",
+    "gablet_auth",
     "gablet_shared_api",
     "gablet_tracking"
 ]

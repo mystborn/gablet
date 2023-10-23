@@ -88,7 +88,7 @@ where
         })?;
 
     let mut consumer_builder = Consumer::from_hosts(creds.hosts)
-        .with_group("playground".into())
+        .with_group(creds.group.into())
         .with_fallback_offset(FetchOffset::Earliest)
         .with_offset_storage(Some(GroupOffsetStorage::Kafka));
 

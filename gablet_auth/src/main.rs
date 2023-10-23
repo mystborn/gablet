@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, sync::OnceLock};
+use std::{net::SocketAddr, sync::{OnceLock, Mutex}};
 
 use axum::{
     body::Body,
@@ -14,31 +14,32 @@ use diesel_async::{
     pooled_connection::{bb8::Pool, AsyncDieselConnectionManager},
     AsyncPgConnection,
 };
+use gablet_shared_api::{kafka::kafka_writer::KafkaWriter, credentials::Credentials};
 use gablet_tokens::TokenIssuer;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
-use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
-use crate::{
-    controllers::{login::login, refresh::refresh, register::register, validate::validate_account},
-    credentials::Credentials,
-};
+use crate::controllers::{login::login, refresh::refresh, register::register, validate::validate_account};
 
 mod controllers;
-mod credentials;
 mod models;
 mod schema;
 mod utils;
 
+static CONFIG_PATH: &'static str = "./config/credentials.toml";
+
 fn get_postgres_connection() -> String {
-    let creds = Credentials::new().unwrap();
+    let creds = Credentials::new(CONFIG_PATH).unwrap();
+    let postgres = creds.postgres.expect("Missing postgres credentials");
+
     format!(
         "postgres://{}:{}@{}:{}/{}",
-        creds.postgres.username,
-        creds.postgres.password,
-        creds.postgres.host,
-        creds.postgres.port,
-        creds.postgres.db
+        postgres.username,
+        postgres.password,
+        postgres.host,
+        postgres.port,
+        postgres.db
     )
 }
 
@@ -49,8 +50,9 @@ async fn postgres_connection() -> Pool<AsyncPgConnection> {
 }
 
 fn token_issuer() -> TokenIssuer {
-    let creds = Credentials::new().unwrap();
-    TokenIssuer::new(creds.auth.access_secret, creds.auth.refresh_secret)
+    let creds = Credentials::new(CONFIG_PATH).unwrap();
+    let auth = creds.auth.expect("Missing auth credentials");
+    TokenIssuer::new(auth.access_secret, auth.refresh_secret)
 }
 
 lazy_static::lazy_static! {
@@ -66,12 +68,18 @@ pub async fn start() {
         .with_target("tower_http::trace::make_span", tracing::Level::DEBUG)
         .with_target("gablet_users_api", tracing::Level::DEBUG)
         .with_target("tokio_postgres::prepare", tracing::Level::DEBUG)
+        .with_target("tokio_postgres::query", tracing::Level::DEBUG)
         .with_default(tracing::Level::INFO);
 
-    let layer = tracing_subscriber::fmt::layer();
+    let creds = Credentials::new(CONFIG_PATH).unwrap();
+    let kafka_writer = Mutex::new(KafkaWriter::from_credentials(&creds));
+
+    let console_layer = tracing_subscriber::fmt::layer();
+    let json_layer = tracing_subscriber::fmt::layer().json().with_writer(kafka_writer);
 
     tracing_subscriber::registry()
-        .with(layer)
+        .with(console_layer)
+        .with(json_layer)
         .with(filter)
         .init();
 

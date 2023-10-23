@@ -1,19 +1,21 @@
 use std::sync::OnceLock;
 
+use gablet_shared_api::credentials::Credentials;
 use mail_send::{SmtpClient, SmtpClientBuilder};
 
 use tokio::sync::Mutex;
 
-use crate::credentials::Credentials;
+use crate::CONFIG_PATH;
 
 type MailServer = SmtpClient<tokio_rustls::client::TlsStream<tokio::net::TcpStream>>;
 
 async fn mail_connection() -> MailServer {
-    let creds = Credentials::new().unwrap();
+    let creds = Credentials::new(CONFIG_PATH).unwrap();
+    let mail = creds.mail.expect("Missing mail credentials");
 
-    let credentials = mail_send::Credentials::new(&creds.mail.username, &creds.mail.password);
+    let credentials = mail_send::Credentials::new(&mail.username, &mail.password);
 
-    SmtpClientBuilder::new(&creds.mail.host, creds.mail.port)
+    SmtpClientBuilder::new(&mail.host, mail.port)
         .implicit_tls(false)
         .credentials(credentials)
         .connect()
@@ -33,11 +35,12 @@ pub async fn init_mail_server() {
 }
 
 pub async fn get_mail_server2() -> Result<MailServer, mail_send::Error> {
-    let creds = Credentials::new().unwrap();
+    let creds = Credentials::new(CONFIG_PATH).unwrap();
+    let mail = creds.mail.expect("Missing mail credentials");
 
-    let credentials = mail_send::Credentials::new(&creds.mail.username, &creds.mail.password);
+    let credentials = mail_send::Credentials::new(&mail.username, &mail.password);
 
-    SmtpClientBuilder::new(&creds.mail.host, creds.mail.port)
+    SmtpClientBuilder::new(&mail.host, mail.port)
         .implicit_tls(false)
         .credentials(credentials)
         .connect()

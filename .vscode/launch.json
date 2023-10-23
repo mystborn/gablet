@@ -25,20 +25,20 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'gablet_users_api'",
+            "name": "gablet_auth",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=gablet_users_api",
-                    "--package=gablet_users_api"
+                    "--bin=gablet_auth",
+                    "--package=gablet_auth"
                 ],
                 "filter": {
-                    "name": "gablet_users_api",
+                    "name": "gablet_auth",
                     "kind": "bin"
                 }
             },
             "args": [],
-            "cwd": "${workspaceFolder}/gablet_users_api"
+            "cwd": "${workspaceFolder}/gablet_auth"
         },
         {
             "type": "lldb",
