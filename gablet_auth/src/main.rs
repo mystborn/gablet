@@ -20,7 +20,7 @@ use tower::ServiceBuilder;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing_subscriber::{prelude::*, util::SubscriberInitExt};
 
-use crate::controllers::{login::login, refresh::refresh, register::register, validate::validate_account};
+use crate::controllers::{login::login, logout::logout, refresh::refresh, register::register, validate::validate_account};
 
 mod controllers;
 mod models;
@@ -66,7 +66,7 @@ pub async fn start() {
         .with_target("tower_http::trace::on_response", tracing::Level::TRACE)
         .with_target("tower_http::trace::on_request", tracing::Level::TRACE)
         .with_target("tower_http::trace::make_span", tracing::Level::DEBUG)
-        .with_target("gablet_users_api", tracing::Level::DEBUG)
+        .with_target("gablet_auth", tracing::Level::DEBUG)
         .with_target("tokio_postgres::prepare", tracing::Level::DEBUG)
         .with_target("tokio_postgres::query", tracing::Level::DEBUG)
         .with_default(tracing::Level::INFO);
@@ -96,10 +96,11 @@ pub async fn start() {
 
     let api_routes: Router<(), Body> = Router::new()
         .route("/api/login", post(login))
+        .route("/api/logout", post(logout))
         .route("/api/register", post(register))
         .route("/api/validate", post(validate_account))
         .route("/api/refresh", post(refresh))
-        .route("/api/metrics", get(|| async move { 
+        .route("/api/metrics", get(|| async move {
             tracing::info!("Getting metrics");
             metrics_handle.render() 
         }));
