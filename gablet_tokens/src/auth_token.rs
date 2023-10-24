@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 /// Represents the JWT claims used for authentication.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AuthToken {
-    sub: String,
-    exp: usize,
-    role: String,
-    user_id: i32
+    pub sub: String,
+    pub exp: usize,
+    pub role: String,
+    pub user_id: i32
 }
 
 impl AuthToken {

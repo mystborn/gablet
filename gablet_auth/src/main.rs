@@ -38,7 +38,7 @@ fn get_postgres_connection() -> String {
         postgres.username,
         postgres.password,
         postgres.host,
-        postgres.port,
+        postgres.   port,
         postgres.db
     )
 }
@@ -66,7 +66,7 @@ pub async fn start() {
         .with_target("tower_http::trace::on_response", tracing::Level::TRACE)
         .with_target("tower_http::trace::on_request", tracing::Level::TRACE)
         .with_target("tower_http::trace::make_span", tracing::Level::DEBUG)
-        .with_target("gablet_auth", tracing::Level::DEBUG)
+        .with_target("gablet_auth", if cfg!(debug_assertions) { tracing::Level::TRACE } else { tracing::Level::DEBUG })
         .with_target("tokio_postgres::prepare", tracing::Level::DEBUG)
         .with_target("tokio_postgres::query", tracing::Level::DEBUG)
         .with_default(tracing::Level::INFO);
@@ -101,7 +101,6 @@ pub async fn start() {
         .route("/api/validate", post(validate_account))
         .route("/api/refresh", post(refresh))
         .route("/api/metrics", get(|| async move {
-            tracing::info!("Getting metrics");
             metrics_handle.render() 
         }));
 

@@ -20,18 +20,21 @@ pub async fn login(
 ) -> Result<Json<LoginResponse>, (StatusCode, Json<ErrorResult>)> {
     let LoginRequest { username, password } = request;
 
-    tracing::trace!("Logging in {}", username);
-
     let pool = PG_POOL.get().unwrap().clone();
 
-    let connection = &mut pool
-        .get()
-        .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+    tracing::trace!("Logging in {}", username);
+
+    let connection = &mut pool.get().await.map_err(|err| {
+        tracing::error!("Failed to get db connection. {}", err);
+        get_internal_error(err).to_tuple()
+    })?;
 
     let user = find_user(Some(username.clone()), Some(username.clone()), connection)
         .await
-        .map_err(|err| get_internal_error(err).to_tuple())?
+        .map_err(|err| {
+            tracing::error!("Error while fetching user: {}", err);
+            get_internal_error(err).to_tuple()
+        })?
         .ok_or_else(|| {
             get_error_from_string(
                 StatusCode::UNAUTHORIZED,
@@ -48,21 +51,37 @@ pub async fn login(
         .to_tuple());
     }
 
-    let access = get_access_token(&user.username, user.id, user.level)
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+    let access = get_access_token(&user.username, user.id, user.level).map_err(|err| {
+        tracing::error!("Failed to get access token: {}", err);
+        get_internal_error(err).to_tuple()
+    })?;
 
-    let refresh =
-        get_refresh_token(&user.username).map_err(|err| get_internal_error(err).to_tuple())?;
+    let refresh = get_refresh_token(&user.username).map_err(|err| {
+        tracing::error!("Failed to get refresh token: {}", err);
+        get_internal_error(err).to_tuple()
+    })?;
 
     save_refresh_token(&refresh, &user.username, false, connection)
         .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+        .map_err(|err| {
+            tracing::error!("Failed to save refresh token: {}", err);
+            get_internal_error(err).to_tuple()
+        })?;
 
     diesel::update(&user)
         .set(db_last_login.eq(chrono::Utc::now().naive_utc()))
         .execute(connection)
         .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+        .map_err(|err| {
+            tracing::error!(
+                "Failed to update last login for user {}: {}",
+                user.username,
+                err
+            );
+            get_internal_error(err).to_tuple()
+        })?;
+
+    tracing::trace!("Logged in {}", username);
 
     Ok(Json(LoginResponse::new(access, refresh)))
 }

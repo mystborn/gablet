@@ -21,7 +21,7 @@ pub async fn validate_account(
     Json(request): Json<ValidateRequest>,
 ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)> {
     let ValidateRequest { token, username } = request;
-    
+
     check_validate_token(&token).map_err(|err| {
         get_error_message(
             err,
@@ -33,14 +33,17 @@ pub async fn validate_account(
 
     let pool = PG_POOL.get().unwrap().clone();
 
-    let connection = &mut pool
-        .get()
-        .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+    let connection = &mut pool.get().await.map_err(|err| {
+        tracing::error!("Failed to get db connection: {}", err);
+        get_internal_error(err).to_tuple()
+    })?;
 
     let mut user = find_user(Some(username.clone()), None, connection)
         .await
-        .map_err(|err| get_internal_error(err).to_tuple())?
+        .map_err(|err| {
+            tracing::error!("Error while fetching user {}: {}", username, err);
+            get_internal_error(err).to_tuple()
+        })?
         .ok_or_else(|| {
             get_error_from_string(
                 StatusCode::UNAUTHORIZED,
@@ -63,13 +66,19 @@ pub async fn validate_account(
         .set(user)
         .execute(connection)
         .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+        .map_err(|err| {
+            tracing::error!("Failed to update user.verified for {}: {}", username, err);
+            get_internal_error(err).to_tuple()
+        })?;
 
     delete(db_refresh_tokens)
         .filter(db_refresh_token.eq(token))
         .execute(connection)
         .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+        .map_err(|err| {
+            tracing::error!("Failed to delete validate token for {}: {}", username, err);
+            get_internal_error(err).to_tuple()
+        })?;
 
     Ok(StatusCode::OK)
 }

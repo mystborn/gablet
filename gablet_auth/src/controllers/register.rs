@@ -7,7 +7,11 @@ use serde::{Deserialize, Serialize};
 use urlencoding::{encode, encode_binary};
 
 use crate::{
-    models::{user::{NewUser, User, UserLevel}, responses::LoginResponse, requests::RegisterRequest},
+    models::{
+        requests::RegisterRequest,
+        responses::LoginResponse,
+        user::{NewUser, User, UserLevel},
+    },
     utils::{
         mail::get_mail_server2,
         tokens::{get_access_token, get_refresh_token, get_validate_token, save_refresh_token},
@@ -38,14 +42,17 @@ pub async fn register(
 
     let pool = PG_POOL.get().unwrap().clone();
 
-    let connection = &mut pool
-        .get()
-        .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+    let connection = &mut pool.get().await.map_err(|err| {
+        tracing::error!("Failed to get db connection: {}", err);
+        get_internal_error(err).to_tuple()
+    })?;
 
     let found_user = find_user(Some(username.clone()), Some(email.clone()), connection)
         .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+        .map_err(|err| {
+            tracing::error!("Error while fetching user {}/{}: {}", username, email, err);
+            get_internal_error(err).to_tuple()
+        })?;
 
     if found_user.is_some() {
         return Err(get_error_from_string(
@@ -57,11 +64,21 @@ pub async fn register(
 
     let user = NewUser::new(&username, &password, &email);
 
-    let token = get_validate_token(&username).map_err(|err| get_internal_error(err).to_tuple())?;
+    let token = get_validate_token(&username).map_err(|err| {
+        tracing::error!(
+            "Error while getting validate token for {}: {}",
+            username,
+            err
+        );
+        get_internal_error(err).to_tuple()
+    })?;
 
     save_refresh_token(&token, &username, false, connection)
         .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+        .map_err(|err| {
+            tracing::error!("Error while saving refresh token for {}: {}", username, err);
+            get_internal_error(err).to_tuple()
+        })?;
 
     let query_token = encode_binary(token.as_bytes());
     let query_username = encode(&username);
@@ -88,10 +105,20 @@ pub async fn register(
         get_mail_server2()
             // .lock()
             .await
-            .map_err(|err| get_internal_error(err).to_tuple())?
+            .map_err(|err| {
+                tracing::error!("Failed to get mail server: {}", err);
+                get_internal_error(err).to_tuple()
+            })?
             .send(mail)
             .await
-            .map_err(|err| get_internal_error(err).to_tuple())?;
+            .map_err(|err| {
+                tracing::error!(
+                    "Failed to send registration email for {}: {}",
+                    username,
+                    err
+                );
+                get_internal_error(err).to_tuple()
+            })?;
     }
 
     let user: Vec<User> = insert_into(db_users)
@@ -99,16 +126,35 @@ pub async fn register(
         .returning(User::as_returning())
         .get_results(connection)
         .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+        .map_err(|err| {
+            tracing::error!(
+                "Failed to insert new user {}/{} into the database: {}",
+                username,
+                email,
+                err
+            );
+            get_internal_error(err).to_tuple()
+        })?;
 
-    let access = get_access_token(&username, user[0].id, UserLevel::User)
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+    let access = get_access_token(&username, user[0].id, UserLevel::User).map_err(|err| {
+        tracing::error!("Failed to get access token for {}: {}", username, err);
+        get_internal_error(err).to_tuple()
+    })?;
 
-    let refresh = get_refresh_token(&username).map_err(|err| get_internal_error(err).to_tuple())?;
+    let refresh = get_refresh_token(&username).map_err(|err| {
+        tracing::error!("Failed to get refresh token for {}: {}", username, err);
+        get_internal_error(err).to_tuple()
+    })?;
 
     save_refresh_token(&refresh, &username, false, connection)
         .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+        .map_err(|err| {
+            tracing::error!("Failed to save refresh token for {}: {}", username, err);
+            get_internal_error(err).to_tuple()
+        })?;
 
-    Ok((StatusCode::CREATED, Json(LoginResponse::new(access, refresh))))
+    Ok((
+        StatusCode::CREATED,
+        Json(LoginResponse::new(access, refresh)),
+    ))
 }

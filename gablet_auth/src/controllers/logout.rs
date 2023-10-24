@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     Json, TypedHeader,
 };
-use diesel::{prelude::*, delete};
+use diesel::{delete, prelude::*};
 use diesel_async::RunQueryDsl;
 use gablet_shared_api::errors::{get_error, get_internal_error, ErrorResult};
 
@@ -18,16 +18,16 @@ pub async fn logout(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
     Json(request): Json<LogoutRequest>,
 ) -> Result<StatusCode, (StatusCode, Json<ErrorResult>)> {
-    tracing::info!("Logging out");
-
     let pool = PG_POOL.get().unwrap().clone();
 
-    let connection = &mut pool
-        .get()
-        .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+    tracing::trace!("Logging user out");
 
-    TOKEN_ISSUER
+    let connection = &mut pool.get().await.map_err(|err| {
+        tracing::error!("Failed to get db connection. {}", err);
+        get_internal_error(err).to_tuple()
+    })?;
+
+    let token = TOKEN_ISSUER
         .validate_auth(auth.token())
         .map_err(|err| get_error(err, StatusCode::UNAUTHORIZED).to_tuple())?;
 
@@ -35,7 +35,16 @@ pub async fn logout(
         .filter(db_refresh_token.eq(&request.refresh))
         .execute(connection)
         .await
-        .map_err(|err| get_internal_error(err).to_tuple())?;
+        .map_err(|err| {
+            tracing::error!(
+                "Failed to delete refresh token while logging out {}: {}",
+                token.sub,
+                err
+            );
+            get_internal_error(err).to_tuple()
+        })?;
+
+    tracing::trace!("Logged {} out", token.sub);
 
     Ok(StatusCode::OK)
 }
